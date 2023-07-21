@@ -46,9 +46,6 @@ int logWideString(wchar_t* str) {
 typedef void* (*GetCurrentGames_t)(GCGObj*, void*, void*, void*);
 GetCurrentGames_t o_GetCurrentGames;
 
-typedef FString* (*ConcatUrl_t)(FString*, FString*);
-ConcatUrl_t o_ConcatUrl;
-
 typedef wchar_t** (*GetMotd_t)(GCGObj* this_ptr, void* a2, void* a3, void* a4);
 GetMotd_t o_GetMotd;
 
@@ -73,19 +70,6 @@ void* hk_GetCurrentGames(GCGObj* this_ptr, void* a2, void* a3, void* a4) {
 	log("GetCurrentGames returned");
 	return res;
 }
-
-FString* hk_ConcatUrl(FString* final_url, FString* url_path) {
-	if (wcscmp(url_path->str, L"/Client/Matchmake") != 0) return o_ConcatUrl(final_url, url_path);
-	
-	log("ConcatUrl: Substituting matchmaking call");
-
-	const wchar_t* custom_url{ L"http://" TARGET_API_ROOT "/api/playfab/Client/Matchmake" };
-	final_url->letter_count = lstrlenW(custom_url) + 1;
-
-	wcscpy_s(final_url->str, static_cast<size_t>(final_url->letter_count), custom_url);
-	return final_url;
-}
-
 
 typedef wchar_t** (*SendRequest_t)(GCGObj* this_ptr, FString* a2, FString* a3, FString* a4, FString* a5);
 SendRequest_t o_SendRequest;
@@ -117,9 +101,6 @@ unsigned long main_thread(void* lpParameter) {
 
 	MH_CreateHook(module_base + 0x13DA280, hk_GetCurrentGames, reinterpret_cast<void**>(&o_GetCurrentGames));
 	MH_EnableHook(module_base + 0x13DA280);
-
-	/*MH_CreateHook(module_base + 0x14ACB70, hk_ConcatUrl, reinterpret_cast<void**>(&o_ConcatUrl));
-	MH_EnableHook(module_base + 0x14ACB70);*/
 
 	MH_CreateHook(module_base + 0x14a1250, hk_SendRequest, reinterpret_cast<void**>(&o_SendRequest));
 	MH_EnableHook(module_base + 0x14a1250);
