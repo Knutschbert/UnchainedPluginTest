@@ -4,6 +4,11 @@
 
 //#define TARGET_API_ROOT L"localhost"
 #define TARGET_API_ROOT L"servers.polehammer.net"
+#ifdef _DEBUG
+	#define PROTOCOL L"http"
+#else
+	#define PROTOCOL L"https"
+#endif
 
 struct FString {
 	FString(const wchar_t* str) {
@@ -51,7 +56,7 @@ GetMotd_t o_GetMotd;
 
 void* hk_GetMotd(GCGObj* this_ptr, void* a2, void* a3, void* a4) {
 	auto old_base = this_ptr->url_base;
-	this_ptr->url_base = FString(L"http://" TARGET_API_ROOT L"/api/tbio");
+	this_ptr->url_base = FString( PROTOCOL L"://" TARGET_API_ROOT L"/api/tbio");
 	void* res = o_GetMotd(this_ptr, a2, a3, a4);
 
 	this_ptr->url_base = old_base;
@@ -63,7 +68,7 @@ void* hk_GetCurrentGames(GCGObj* this_ptr, void* a2, void* a3, void* a4) {
 	log("GetCurrentGames called");
 	auto old_base = this_ptr->url_base;
 
-	this_ptr->url_base = FString( L"http://" TARGET_API_ROOT "/api/tbio" );
+	this_ptr->url_base = FString( PROTOCOL L"://" TARGET_API_ROOT "/api/tbio" );
 	void* res{ o_GetCurrentGames(this_ptr, a2, a3, a4) };
 
 	this_ptr->url_base = old_base;
@@ -81,7 +86,7 @@ void* hk_SendRequest(GCGObj* this_ptr, FString* a2, FString* a3, FString* a4, FS
 		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", a2->str) == 0)
 	{
 		FString original = *a2; //save original string and buffer information
-		*a2 = FString(L"http://" TARGET_API_ROOT "/api/playfab/Client/Matchmake"); //overwrite with new string
+		*a2 = FString( PROTOCOL L"://" TARGET_API_ROOT "/api/playfab/Client/Matchmake"); //overwrite with new string
 		log("hk_SendRequest Client/Matchmake");
 		auto res = o_SendRequest(this_ptr, a2, a3, a4, a5); //run the request as normal with new string
 		*a2 = original; //set everything back to normal and pretend nothing happened
