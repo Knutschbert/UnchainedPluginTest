@@ -21,12 +21,53 @@
 #include <nmmintrin.h> // SSE4.2 intrinsics
 
 struct BuildType {
+	~BuildType() {
+		delete[] name;
+	}
+
+	void SetName(const wchar_t* str) {
+		size_t sz;
+		if (name != nullptr)
+			delete[] name;
+		name = (char*)malloc(256 * MB_CUR_MAX);
+		wcstombs_s(&sz, name, 256 * MB_CUR_MAX, str, 255);
+		printf("SETWNAME dst = \"%s\", r = %s  : %d\n", name, str, wcslen(str));
+	}
+
+	void SetName(const char* str)
+	{
+		if (name != nullptr)
+			delete[] name;
+		name = (char*)malloc(256 * MB_CUR_MAX);
+		strcpy_s(name, 256 * MB_CUR_MAX, str);
+		printf("dst = \"%s\", r = %s\n", name, str);
+		//strncpy_s(name, strlen(str), str, 255);
+		//wcstombs_s(&sz, name, 128 * MB_CUR_MAX, str, 127);
+	}
+
 	uint32_t fileHash = 0;
 	uint32_t buildId = 0;
 	uint32_t offsets[F_MaxFuncType] = {};
-	std::string name = "<unnamed>";
+	char* name = nullptr;
 };
 
+// FIXME
+// this is here because it uses wchar, fix by adding a wchar to char fct
+struct BuildInfo
+{
+	BuildInfo() {}
+	BuildInfo(const wchar_t* str, uint32_t id) //: buildStr(str), buildId(id) {}
+	{
+		size_t sz;
+		buildStr = (char*)malloc(128 * MB_CUR_MAX);
+		wcstombs_s(&sz, buildStr, 128 * MB_CUR_MAX, str, 127);
+		//std::cout << "parsed: " << buildStr << std::endl;
+		//wctomb(buildStr, *str);
+		buildId = id;
+	}
+	char* buildStr;
+	uint32_t buildId;
+};
 std::deque<BuildType*> configBuilds;
 
 uint32_t calculateCRC32(const std::string& filename) {
@@ -89,8 +130,6 @@ DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* a2, FString* a3, FStri
 	return o_SendRequest(this_ptr, a2, a3, a4, a5);
 }
 
-
-
 // AssetLoaderPlugin
 
 DECL_HOOK(long long, FindFileInPakFiles_1, (void* this_ptr, const wchar_t* Filename, void** OutPakFile, void* OutEntry)) {
@@ -128,30 +167,6 @@ DECL_HOOK(FString*, GetGameInfo, (FString* ret_ptr, void* uWorld))
 	return val;
 }
 
-//FViewport* __thiscall FViewport::FViewport(FViewport* this, FViewportClient* param_1)
-struct FViewport_C
-{
-	uint8_t ph[0x20];
-	FString AppVersionString;
-};
-
-// FIXME
-struct BuildInfo
-{
-	BuildInfo() {}
-	BuildInfo(const wchar_t* str, uint32_t id) //: buildStr(str), buildId(id) {}
-	{
-		size_t sz;
-		buildStr = (char*)malloc(128 * MB_CUR_MAX);
-		wcstombs_s(&sz, buildStr, 128 * MB_CUR_MAX, str, 127);
-		//std::cout << "parsed: " << buildStr << std::endl;
-		//wctomb(buildStr, *str);
-		buildId = id;
-	}
-	char * buildStr;
-	uint32_t buildId;
-};
-
 //BuildInfo* curBuildInfo = nullptr;
 BuildType curBuild;
 bool jsonDone = false;
@@ -162,16 +177,6 @@ void serializeBuilds()
 {
 	char buff[2048];
 	char* dest = buff;
-	/*if (offsetsLoaded && curBuild == nullptr)
-	{
-		needsSerialization = false;
-		BuildType build;
-		build.name = "<unnamed>";
-		build.buildId = 0;
-		build.fileHash = 0;
-		curBuild = new BuildType(build);
-		log("unnamed init");
-	}*/
 	if (curBuild.buildId > 0)
 	{
 
@@ -182,18 +187,10 @@ void serializeBuilds()
 		strncpy_s(ladBuff, 256, pValue, len);
 		strncpy_s(ladBuff + len - 1, 256 - len, "\\Chivalry 2\\Saved\\Config\\c2uc.builds.json", 42);
 
-		/*for (uint8_t i = 0; i < F_MaxFuncType; ++i)
-			curBuild.offsets[i] = addrOffsets[i];*/
-
-		log(ladBuff);
+		printf("Config written to:\n\t%s\n", ladBuff);
 		std::ofstream out(ladBuff);
-		/*out << "{\n\"" << curBuildInfo->buildStr << "\": {";
-		out << "\n\"Build\" : " << curBuildInfo->buildId;
-		out << ",\n\"FileHash\" : " << calculateCRC32("Chivalry2-Win64-Shipping.exe");
-		for (uint8_t i = 0; i < F_MaxFuncType; ++i)
-			out << ",\n\"" << strFunc[i] << "\": " << addrOffsets[i];*/
 
-		out << "\n{\n\"" << curBuild.name << "\": {";
+		out << "\n{\n\"" << (curBuild.name != nullptr ? curBuild.name : "") << "\": {";
 		out << "\n\"Build\" : " << curBuild.buildId;
 		out << ",\n\"FileHash\" : " << curBuild.fileHash;
 		for (uint8_t i = 0; i < F_MaxFuncType; ++i)
@@ -201,7 +198,7 @@ void serializeBuilds()
 
 		for (auto build : configBuilds)
 		{
-			out << "\n},\n\"" << build->name << "\": {";
+			out << "\n},\n\"" << (build->name != nullptr ? build->name : "") << "\": {";
 			out << "\n\"Build\" : " << build->buildId;
 			out << ",\n\"FileHash\" : " << build->fileHash;
 			for (uint8_t i = 0; i < F_MaxFuncType; ++i)
@@ -223,28 +220,31 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 		uint32_t buildId = _wtoi(buildNr);
 		if (curBuild.buildId == 0)
 		{
-			needsSerialization = true;
-			auto bi = new BuildInfo(this_ptr->AppVersionString.str + 7, buildId); // FIXME
+			if (curBuild.name == nullptr)
+			{
+				needsSerialization = true;
+				auto bi = new BuildInfo(this_ptr->AppVersionString.str + 7, buildId); // FIXME
 
-			curBuild.name = bi->buildStr;
+				curBuild.name = bi->buildStr;
+			}
+			/*auto build = new FString(this_ptr->AppVersionString.str + 7);
+			curBuild.SetName(build->str);
+			log("set name!");*/
+			logWideString(this_ptr->AppVersionString.str + 7);
 			curBuild.buildId = buildId;
 			curBuild.fileHash = calculateCRC32("Chivalry2-Win64-Shipping.exe");
-			/*for (uint8_t i = 0; i < F_MaxFuncType; ++i)
-				curBuild.offsets[i] = addrOffsets[i];*/
-			//curBuild = new BuildType(build);
-			log("Viewport constructor!");
-			if (offsetsLoaded)
+		}
+
+		if (curBuild.name && strlen(curBuild.name) > 0)
+		{
+			printf("Build String found!%s\n\t%s\n", (curBuild.buildId == 0) ? "" : " (loaded)", curBuild.name);
+
+			if (offsetsLoaded && needsSerialization)
 				serializeBuilds();
 		}
-		/*else if (curBuild && curBuild->buildId == 0)
-		{ }*/
-		else
-			log("Viewport constructor! (loaded)");
-			
-			
 
 #ifdef _DEBUG
-		std::wcout << this_ptr->AppVersionString.str << ": " << buildNr << " " << buildId << std::endl;
+		//std::wcout << this_ptr->AppVersionString.str << ": " << buildNr << " " << buildId << std::endl;
 #endif
 	}
 	return val;
@@ -295,21 +295,43 @@ int LoadBuildConfig()
 
 			json_t const* fileHash = json_getProperty(buildEntry, "FileHash");
 			if (!fileHash || JSON_INTEGER != json_getType(fileHash)) {
-				puts("Error, the fileHash property is not found.");
+				puts("Error, the FileHash property is not found.");
 				return EXIT_FAILURE;
 			}
-
+			if (!build || JSON_INTEGER != json_getType(build)) {
+				puts("Error, the Build property is not found.");
+				return EXIT_FAILURE;
+			}
+			// compare hash
 			uint64_t fileHashVal = json_getInteger(fileHash);
 			bool hashMatch = fileHashVal == curFileHash;
 
+			// Create Build Config entry
+			BuildType bd_;
+			BuildType& bd = bd_;
+
 			if (hashMatch)
 			{
+				bd = curBuild;
 				needsSerialization = false;
-				printf("Hash match (0x%llx) Build: %s\n", fileHashVal, buildName);
+				//printf("Hash match (0x%llx) Build: %s\n", fileHashVal, buildName);
+				printf("Found matching Build: %s\n", buildName);
 			}
 
-			BuildType bd;
-			bd.name = std::string(buildName);
+
+
+			
+
+			printf("%s : %d\n", buildName, strlen(buildName));
+
+			if (strlen(buildName) > 0)
+			{
+				bd.SetName(buildName);
+				printf("valid name %s : %d\n", bd.name, strlen(bd.name));
+			}
+			else
+				bd.name = nullptr;
+			//log(bd.name);
 			bd.buildId = (uint32_t)json_getInteger(build);
 			bd.fileHash = (uint32_t)fileHashVal;
 			for (uint8_t i = 0; i < F_MaxFuncType; ++i)
@@ -319,6 +341,7 @@ int LoadBuildConfig()
 					if (JSON_INTEGER == json_getType(GetMotd_j))
 						if (uint32_t offsetVal = (uint32_t)json_getInteger(GetMotd_j))
 							bd.offsets[i] = offsetVal;
+					// offsets not found here will be scanned later
 				}
 				else if (hashMatch) needsSerialization = true;
 			}
@@ -329,23 +352,22 @@ int LoadBuildConfig()
 				configBuilds.push_back(new BuildType(bd));
 		}
 	}
+
+	return 0;
 }
 
 
 
 unsigned long main_thread(void* lpParameter) {
 	log(logo);
-	log("Chivalry 2 Unchained");
+	log("Chivalry 2 Unchained Plugin");
 	MH_Initialize();
+
 	// https://github.com/HoShiMin/Sig
 	const void* found = nullptr;
-	//found = Sig::find(buf, size, "11 22 ? 44 ?? 66 AA bb cC Dd");
-	//HMODULE var = GetModuleHandle(NULL);
-	//GetModuleInformation(GetCurrentProcess(), var, &moduleInfo, sizeof(moduleInfo));
 	LoadBuildConfig();
 	baseAddr = GetModuleHandleA("Chivalry2-Win64-Shipping.exe");
-	//cerTest();
-	//std::cout << std::hex << calculateCRC32("Chivalry2-Win64-Shipping.exe") << std::endl;
+
 	int file_descript;
 	//unsigned long file_size;
 	errno_t err = _sopen_s(&file_descript, "Chivalry2-Win64-Shipping.exe", O_RDONLY, _SH_DENYNO, 0);
@@ -355,15 +377,8 @@ unsigned long main_thread(void* lpParameter) {
 	// Get the size of the file
 	off_t file_size = _filelength(file_descript);
 
-	//file_size = get_size_by_fd(file_descript);
-	/*printf("file size:\t%lu\n", file_size);*/
-
 	//MODULEINFO moduleInfo;	
 	GetModuleInformation(GetCurrentProcess(), baseAddr, &moduleInfo, sizeof(moduleInfo));
-
-	//std::cout << "MINFO: " << moduleInfo.SizeOfImage << " " << moduleInfo.EntryPoint << std::endl;
-
-	//uint32_t crc = crc32c_append(0, (uint8_t *)baseAddr, moduleInfo.SizeOfImage);
 
 	unsigned char* module_base{ reinterpret_cast<unsigned char*>(baseAddr) };
 
@@ -377,8 +392,6 @@ unsigned long main_thread(void* lpParameter) {
 			HOOK_ATTACH(module_base, FViewport);
 		}
 	}
-
-
 
 	char buff[512];
 	char* dest = buff;
