@@ -25,49 +25,25 @@ struct BuildType {
 		delete[] name;
 	}
 
-	void SetName(const wchar_t* str) {
-		size_t sz;
-		if (name != nullptr)
-			delete[] name;
-		name = (char*)malloc(256 * MB_CUR_MAX);
-		wcstombs_s(&sz, name, 256 * MB_CUR_MAX, str, 255);
-		printf("SETWNAME dst = \"%s\", r = %s  : %d\n", name, str, wcslen(str));
+	void SetName(const char* newName) {
+		nameStr = std::string(newName);
 	}
 
-	void SetName(const char* str)
-	{
-		if (name != nullptr)
-			delete[] name;
-		name = (char*)malloc(256 * MB_CUR_MAX);
-		strcpy_s(name, 256 * MB_CUR_MAX, str);
-		printf("dst = \"%s\", r = %s\n", name, str);
-		//strncpy_s(name, strlen(str), str, 255);
-		//wcstombs_s(&sz, name, 128 * MB_CUR_MAX, str, 127);
+	void SetName(const wchar_t* newName) {
+
+		std::wstring ws(newName);
+		nameStr = std::string(ws.begin(), ws.end());
+
 	}
 
 	uint32_t fileHash = 0;
 	uint32_t buildId = 0;
 	uint32_t offsets[F_MaxFuncType] = {};
+	std::string nameStr = "";
+private:
 	char* name = nullptr;
 };
 
-// FIXME
-// this is here because it uses wchar, fix by adding a wchar to char fct
-struct BuildInfo
-{
-	BuildInfo() {}
-	BuildInfo(const wchar_t* str, uint32_t id) //: buildStr(str), buildId(id) {}
-	{
-		size_t sz;
-		buildStr = (char*)malloc(128 * MB_CUR_MAX);
-		wcstombs_s(&sz, buildStr, 128 * MB_CUR_MAX, str, 127);
-		//std::cout << "parsed: " << buildStr << std::endl;
-		//wctomb(buildStr, *str);
-		buildId = id;
-	}
-	char* buildStr;
-	uint32_t buildId;
-};
 std::deque<BuildType*> configBuilds;
 
 uint32_t calculateCRC32(const std::string& filename) {
@@ -184,13 +160,15 @@ void serializeBuilds()
 		size_t len;
 		char ladBuff[512];
 		errno_t err = _dupenv_s(&pValue, &len, "LOCALAPPDATA");
-		strncpy_s(ladBuff, 256, pValue, len);
+		if (err != 0)
+			return;
+		strncpy_s(ladBuff, 512 * sizeof(char), pValue, len);
 		strncpy_s(ladBuff + len - 1, 256 - len, "\\Chivalry 2\\Saved\\Config\\c2uc.builds.json", 42);
 
 		printf("Config written to:\n\t%s\n", ladBuff);
 		std::ofstream out(ladBuff);
 
-		out << "\n{\n\"" << (curBuild.name != nullptr ? curBuild.name : "") << "\": {";
+		out << "\n{\n\"" << ((curBuild.nameStr.length() > 0) ? curBuild.nameStr.c_str() : "") << "\": {";
 		out << "\n\"Build\" : " << curBuild.buildId;
 		out << ",\n\"FileHash\" : " << curBuild.fileHash;
 		for (uint8_t i = 0; i < F_MaxFuncType; ++i)
@@ -198,7 +176,7 @@ void serializeBuilds()
 
 		for (auto build : configBuilds)
 		{
-			out << "\n},\n\"" << (build->name != nullptr ? build->name : "") << "\": {";
+			out << "\n},\n\"" << ((build->nameStr.length() > 0) ? build->nameStr.c_str() : "") << "\": {";
 			out << "\n\"Build\" : " << build->buildId;
 			out << ",\n\"FileHash\" : " << build->fileHash;
 			for (uint8_t i = 0; i < F_MaxFuncType; ++i)
@@ -218,26 +196,17 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 	if (buildNr != nullptr)
 	{
 		uint32_t buildId = _wtoi(buildNr);
-		if (curBuild.buildId == 0)
+		if (curBuild.buildId == 0 || curBuild.nameStr.length() == 0)
 		{
-			if (curBuild.name == nullptr)
-			{
-				needsSerialization = true;
-				auto bi = new BuildInfo(this_ptr->AppVersionString.str + 7, buildId); // FIXME
+			needsSerialization = true;
+			curBuild.SetName(this_ptr->AppVersionString.str + 7);
 
-				curBuild.name = bi->buildStr;
-			}
-			/*auto build = new FString(this_ptr->AppVersionString.str + 7);
-			curBuild.SetName(build->str);
-			log("set name!");*/
-			logWideString(this_ptr->AppVersionString.str + 7);
 			curBuild.buildId = buildId;
 			curBuild.fileHash = calculateCRC32("Chivalry2-Win64-Shipping.exe");
 		}
-
-		if (curBuild.name && strlen(curBuild.name) > 0)
+		if (curBuild.nameStr.length() > 0)
 		{
-			printf("Build String found!%s\n\t%s\n", (curBuild.buildId == 0) ? "" : " (loaded)", curBuild.name);
+			printf("Build String found!%s\n\t%s\n", (curBuild.buildId == 0) ? "" : " (loaded)", curBuild.nameStr.c_str());
 
 			if (offsetsLoaded && needsSerialization)
 				serializeBuilds();
@@ -274,8 +243,8 @@ int LoadBuildConfig()
 	file.close();
 
 	// parse json
-	json_t mem[2048];
-	const json_t* json = json_create(const_cast<char*>(buffer.c_str()), mem, 2048);
+	json_t mem[128];
+	const json_t* json = json_create(const_cast<char*>(buffer.c_str()), mem, 128);
 
 	if (!json) {
 		puts("Failed to create json parser");
@@ -285,7 +254,8 @@ int LoadBuildConfig()
 
 	json_t const* buildEntry;
 	needsSerialization = true;
-	for (buildEntry = json_getChild(json); buildEntry != 0; buildEntry = json_getSibling(buildEntry)) {
+	buildEntry = json_getChild(json);
+	while (buildEntry != 0) {
 		if (JSON_OBJ == json_getType(buildEntry)) {
 
 			char const* fileSize = json_getPropertyValue(buildEntry, "FileSize");
@@ -314,24 +284,16 @@ int LoadBuildConfig()
 			{
 				bd = curBuild;
 				needsSerialization = false;
-				//printf("Hash match (0x%llx) Build: %s\n", fileHashVal, buildName);
 				printf("Found matching Build: %s\n", buildName);
 			}
 
-
-
-			
-
-			printf("%s : %d\n", buildName, strlen(buildName));
+			printf("%s : %u\n", buildName, strlen(buildName));
 
 			if (strlen(buildName) > 0)
 			{
 				bd.SetName(buildName);
-				printf("valid name %s : %d\n", bd.name, strlen(bd.name));
 			}
-			else
-				bd.name = nullptr;
-			//log(bd.name);
+
 			bd.buildId = (uint32_t)json_getInteger(build);
 			bd.fileHash = (uint32_t)fileHashVal;
 			for (uint8_t i = 0; i < F_MaxFuncType; ++i)
@@ -351,6 +313,7 @@ int LoadBuildConfig()
 			else
 				configBuilds.push_back(new BuildType(bd));
 		}
+		buildEntry = json_getSibling(buildEntry);
 	}
 
 	return 0;
