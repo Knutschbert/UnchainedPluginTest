@@ -41,6 +41,17 @@ struct GCGObj {
 	FString url_base;
 };
 
+struct GetMotdRequest {
+	uint8_t ph[0xD8];
+	FString token;
+};
+
+// Technically the same as GetMotdRequest for now. Just figure they should be decoupled.
+struct GetCurrentGamesRequest {
+	uint8_t ph[0xD8];
+	FString token;
+};
+
 // Helper functions
 
 void log(const char* str) {

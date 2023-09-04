@@ -30,10 +30,8 @@ struct BuildType {
 	}
 
 	void SetName(const wchar_t* newName) {
-
 		std::wstring ws(newName);
 		nameStr = std::string(ws.begin(), ws.end());
-
 	}
 
 	uint32_t fileHash = 0;
@@ -69,42 +67,78 @@ uint32_t calculateCRC32(const std::string& filename) {
 	return crc ^ 0xFFFFFFFF; // Final XOR value for CRC-32
 }
 
-DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, void* a3, void* a4)) {
-	auto old_base = this_ptr->url_base;
-	this_ptr->url_base = FString( PROTOCOL L"://" TARGET_API_ROOT L"/api/tbio");
-	void* res = o_GetMotd(this_ptr, a2, a3, a4);
+// Browser plugin
+DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, void* a4)) {
+	log("GetMotd Called");
 
-	this_ptr->url_base = old_base;
-	log("GetMotd returned");
-	return res;
-}
-
-DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, void* a3, void* a4)) {
-	log("GetCurrentGames called");
 	auto old_base = this_ptr->url_base;
 
-	this_ptr->url_base = FString( PROTOCOL L"://" TARGET_API_ROOT "/api/tbio" );
-	void* res{ o_GetCurrentGames(this_ptr, a2, a3, a4) };
+	auto originalToken = request->token;
+	auto emptyToken = FString(L"");
 
-	this_ptr->url_base = old_base;
-	log("GetCurrentGames returned");
-	return res;
-}
-
-DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* a2, FString* a3, FString* a4, FString* a5)) {
-
-	if (a2->letter_count > 0 &&
-		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", a2->str) == 0)
-	{
-		FString original = *a2; //save original string and buffer information
-		*a2 = FString( PROTOCOL L"://" TARGET_API_ROOT "/api/playfab/Client/Matchmake"); //overwrite with new string
-		log("hk_SendRequest Client/Matchmake");
-		auto res = o_SendRequest(this_ptr, a2, a3, a4, a5); //run the request as normal with new string
-		*a2 = original; //set everything back to normal and pretend nothing happened
+	try {
+		this_ptr->url_base = FString( PROTOCOL L"://" TARGET_API_ROOT L"/api/tbio");
+		request->token = emptyToken;
+		void* res = o_GetMotd(this_ptr, a2, request, a4);
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		log("GetMotd returned");
 		return res;
 	}
-	return o_SendRequest(this_ptr, a2, a3, a4, a5);
+	catch (...) {
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		throw;
+	}
 }
+
+DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRequest* request, void* a)) {
+	log("GetCurrentGames called");
+
+	auto old_base = this_ptr->url_base;
+
+	auto originalToken = request->token;
+	auto emptyToken = FString(L"");
+
+	try {
+		this_ptr->url_base = FString(PROTOCOL L"://" TARGET_API_ROOT L"/api/tbio");
+		request->token = emptyToken;
+		void* res = o_GetCurrentGames(this_ptr, a2, request, a4);
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		log("GetMotd returned");
+		return res;
+	}
+	catch (...) {
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		throw;
+	}
+}
+
+DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FString* bodyContentPtr, FString* authKeyHeaderPtr, FString* authKeyValuePtr)) {
+	if (fullUrlInputPtr->letter_count > 0 &&
+		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", fullUrlInputPtr->str) == 0)
+	{
+		FString original = *fullUrlInputPtr; //save original string and buffer information
+		*fullUrlInputPtr = FString(PROTOCOL L"://" TARGET_API_ROOT "/api/playfab/Client/Matchmake"); //overwrite with new string
+		log("hk_SendRequest Client/Matchmake");
+
+		auto empty = FString(L""); // Send empty string for auth, so that our backend isn't getting user tokens.
+		try {
+			auto res = o_SendRequest(this_ptr, fullUrlInputPtr, bodyContentPtr, authKeyHeaderPtr, &empty); //run the request as normal with new string
+			*fullUrlInputPtr = original; //set everything back to normal and pretend nothing happened
+			return res;
+		}
+		catch (...) {
+			*fullUrlInputPtr = original; //set everything back to normal and pretend nothing happened
+			throw;
+		}
+		;
+	}
+	return o_SendRequest(this_ptr, fullUrlInputPtr, bodyContentPtr, authKeyHeaderPtr, authKeyValuePtr);
+}
+// end browser plugin
 
 // AssetLoaderPlugin
 
