@@ -1,5 +1,7 @@
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
-#include <Psapi.h>
+#include <psapi.h>
 #include <MinHook/include/MinHook.h>
 #include <iostream>
 #include "include/main.h"
@@ -12,8 +14,10 @@
 #include <mutex>
 #include <queue>
 #include <string>
-#include <winsock2.h>
-#include <ws2tcpip.h>
+
+//black magic for the linker to get winsock2 to work
+#pragma comment(lib, "Ws2_32.lib")
+
 //#define TARGET_API_ROOT L"localhost"
 #define TARGET_API_ROOT L"servers.polehammer.net"
 #ifdef _DEBUG

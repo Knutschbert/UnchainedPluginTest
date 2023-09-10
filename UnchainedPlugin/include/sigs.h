@@ -12,8 +12,8 @@
 	etype(FindFileInPakFiles_2) \
 	etype(UTBLLocalPlayer_Exec) \
 	etype(GetGameInfo) \
-	etype(MaxFuncType) \
-	etype(ConsoleCommand)
+	etype(ConsoleCommand) \
+	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
 

@@ -67,12 +67,12 @@ int logWideString(wchar_t* str) {
 	return 0;
 #endif
 	int i = 0;
-	while (*(char*)str != 0) {
-		std::cout << *(char*)str;
-		str += 2;
+	while (*(wchar_t*)str != 0) {
+		std::wcout << *(wchar_t*)str;
+		str++;
 		i++;
 	}
-	std::cout << std::endl;
+	std::wcout << std::endl;
 	return i;
 }
 
