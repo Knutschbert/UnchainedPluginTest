@@ -274,18 +274,22 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	else {
 		cached_this = this_ptr;
 	}
-	log("PlayerController Exec called with:");
+#ifdef _DEBUG
+	log("[RCON][DEBUG]: PlayerController Exec called with:");
 	logWideString(str.str);
+#endif
 	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
-		log("Intercept command detected");
+#ifdef _DEBUG
+		log("[RCON][DEBUG]: Intercept command detected");
+#endif
 		queueLock.lock();
 		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
 			//check if the intercept command is large enough to contain the substitute command
 			if (wcslen(commandQueue.front()->c_str()) > wcslen(str.str)) {
-				log("Intercept command too small to contain substitute command. Command was thrown out.");
+				log("[WARNING][RCON]: Intercept command too small to contain substitute command. Command was thrown out.");
 				//throw away the substitute command to keep it from
 				//clogging the queue. In a headless instance, it's unlikely
 				//the intercepted command will ever be larger than it is now.
@@ -301,7 +305,7 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 			//copy the substitute command over top of the intercepted command
 			wcscpy_s(str.str, lstrlenW(str.str) + 1, command->c_str());
 
-			log("RCON command substituted:");
+			log("[RCON]: command substituted:");
 			logWideString(str.str);
 			return o_ConsoleCommand(this_ptr, str, b);
 		}
@@ -445,7 +449,7 @@ void handleRCON() {
 		return;
 	}
 
-	log("Found -rcon flag");
+	log("[RCON]: Found -rcon flag. RCON will be enabled.");
 
 	int port = parsePortParams(commandLine, flagLoc);
 	if (port == -1) {
@@ -454,12 +458,12 @@ void handleRCON() {
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		log("Failed to initialize Winsock!");
+		log("[RCON][FATAL]: Failed to initialize Winsock!");
 		ExitThread(0);
 		return;
 	}
 
-	log((std::string("Opening RCON server socket on TCP/") + std::to_string(port)).c_str());
+	log((std::string("[RCON][INFO]: Opening RCON server socket on TCP/") + std::to_string(port)).c_str());
 
 	SOCKET listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -475,13 +479,13 @@ void handleRCON() {
 	while (true) {
 		//set up a new command string
 		auto command = std::make_unique<std::wstring>();
-		log("waiting for command");
+		log("[RCON]: Waiting for command");
 		//get a command from a socket
 		int addrLen = sizeof(addr);
 		SOCKET remote = accept(listenSock, (sockaddr*)&addr, &addrLen);
-		log("accepted connection for RCON");
+		log("[RCON]: Accepted connection");
 		if (remote == INVALID_SOCKET) {
-			log("invalid socket error");
+			log("[RCON][FATAL]: invalid socket error");
 			return;
 		}
 		const int BUFFER_SIZE = 256;
@@ -508,7 +512,7 @@ void handleRCON() {
 
 		//add into command queue
 		queueLock.lock();
-		log("added command to queue: ");
+		log("[RCON]: added command to queue: ");
 		logWideString(const_cast<wchar_t*>(command->c_str()));
 		commandQueue.emplace(std::move(command)); //put the command into the queue
 		queueLock.unlock();
