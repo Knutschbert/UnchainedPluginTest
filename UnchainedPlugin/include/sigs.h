@@ -12,7 +12,8 @@
 	etype(FindFileInPakFiles_2) \
 	etype(UTBLLocalPlayer_Exec) \
 	etype(GetGameInfo) \
-	etype(MaxFuncType)
+	etype(MaxFuncType) \
+	etype(ConsoleCommand)
 
 #define etype(x) uint32_t x = 0x0;
 
@@ -79,5 +80,7 @@ static const char* signatures[] =
 	"75 1A 45 84 ED 75 15 48 85 F6 74 10 40 38 BE ? ? ? ? 74 07 32 DB E9 ? ? ? ? 48 8B 5D 60 49 8B D6 4C 8B 45 58 4C 8B CB 49 8B CF",
 	/*"GetGameInfo"*/
 	"48 8B C4 48 89 58 ?? 48 89 50 ?? 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC E0 02 00 00",
-	
+	/*ConsoleCommand*/
+	"40 53 48 83 EC 20 48 8B 89 D0 02 00 00 48 8B DA 48 85 C9 74 0E E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 20 5B C3 33 C0 48 89 02 48 \
+	89 42 08 48 8B C3 48 83 C4 20 5B C3"
 };

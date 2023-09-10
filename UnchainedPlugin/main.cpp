@@ -1,4 +1,4 @@
-#include <Windows.h>
+#include <windows.h>
 #include <Psapi.h>
 #include <MinHook/include/MinHook.h>
 #include <iostream>
@@ -9,6 +9,11 @@
 #include <io.h>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 //#define TARGET_API_ROOT L"localhost"
 #define TARGET_API_ROOT L"servers.polehammer.net"
 #ifdef _DEBUG
@@ -92,7 +97,7 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 	}
 }
 
-DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRequest* request, void* a)) {
+DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRequest* request, void* a4)) {
 	log("GetCurrentGames called");
 
 	auto old_base = this_ptr->url_base;
@@ -194,8 +199,10 @@ void serializeBuilds()
 		size_t len;
 		char ladBuff[512];
 		errno_t err = _dupenv_s(&pValue, &len, "LOCALAPPDATA");
-		if (err != 0)
+		if (err != 0) {
 			return;
+		}
+		//TODO: Ensure pValue is not null, or make a note here explaining why it couldn't possibly be null
 		strncpy_s(ladBuff, 512 * sizeof(char), pValue, len);
 		strncpy_s(ladBuff + len - 1, 256 - len, "\\Chivalry 2\\Saved\\Config\\c2uc.builds.json", 42);
 
@@ -251,6 +258,77 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 #endif
 	}
 	return val;
+}
+
+std::mutex queueLock;
+std::queue<std::unique_ptr<std::wstring>> commandQueue;
+DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b)) {
+	static void* cached_this;
+	if (this_ptr == NULL) {
+		this_ptr = cached_this;
+	}
+	else {
+		cached_this = this_ptr;
+	}
+	log("PlayerController Exec called with:");
+	logWideString(str.str);
+	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
+	//if the command starts with the intercept prefix
+	//TODO: clean up mutex stuff here. Way too sloppy to be final
+	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
+		log("Intercept command detected");
+		queueLock.lock();
+		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
+			//check if the intercept command is large enough to contain the substitute command
+			if (wcslen(commandQueue.front()->c_str()) > wcslen(str.str)) {
+				log("Intercept command too small to contain substitute command. Command was thrown out.");
+				//throw away the substitute command to keep it from
+				//clogging the queue. In a headless instance, it's unlikely
+				//the intercepted command will ever be larger than it is now.
+				commandQueue.pop();
+				queueLock.unlock();
+				return o_ConsoleCommand(this_ptr, str, b);
+			}
+			//pull the substitute command off the queue
+			auto command = std::move(commandQueue.front());
+			commandQueue.pop();
+			queueLock.unlock(); //unlock the mutex
+			//log("pretend we ran the command");
+			//copy the substitute command over top of the intercepted command
+			wcscpy_s(str.str, lstrlenW(str.str) + 1, command->c_str());
+
+			log("RCON command substituted:");
+			logWideString(str.str);
+			return o_ConsoleCommand(this_ptr, str, b);
+		}
+		queueLock.unlock();
+	}
+	//std::cout << "0x" << std::hex << this_ptr << std::endl;
+	return o_ConsoleCommand(this_ptr, str, b);
+}
+
+//parse the command line for the rcon flag, and return the port specified
+//if not port was specified, or the string that was supposed to be a port number 
+//was invalid, then -1 is returned
+int parsePortParams(std::wstring commandLine, size_t flagLoc) {
+	size_t portStart = commandLine.find(L" ", flagLoc); //next space
+	if (portStart == std::wstring::npos) {
+		return -1;
+	}
+	size_t portEnd = commandLine.find(L" ", portStart + 1); //space after that
+
+	std::wstring port = portEnd != std::wstring::npos
+		? commandLine.substr(portStart, portEnd - portStart)
+		: commandLine.substr(portStart);
+
+	//log("found port:");
+	//logWideString(const_cast<wchar_t*>(port.c_str()));
+	try {
+		return std::stoi(port);
+	}
+	catch (std::exception e) {
+		return -1;
+	}
 }
 
 int LoadBuildConfig()
@@ -353,7 +431,87 @@ int LoadBuildConfig()
 	return 0;
 }
 
+void handleRCON() {
+	MH_Initialize();
 
+	std::wstring commandLine = GetCommandLineW();
+	size_t flagLoc = commandLine.find(L"-rcon");
+	if (flagLoc == std::wstring::npos) {
+		ExitThread(0);
+		return;
+	}
+
+	log("Found -rcon flag");
+
+	int port = parsePortParams(commandLine, flagLoc);
+	if (port == -1) {
+		port = 9001; //default port
+	}
+
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		log("Failed to initialize Winsock!");
+		ExitThread(0);
+		return;
+	}
+
+	log((std::string("Opening RCON server socket on TCP/") + std::to_string(port)).c_str());
+
+	SOCKET listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+	sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr);
+
+	bind(listenSock, (sockaddr*)&addr, sizeof(addr));
+	listen(listenSock, SOMAXCONN);
+
+
+	while (true) {
+		//set up a new command string
+		auto command = std::make_unique<std::wstring>();
+		log("waiting for command");
+		//get a command from a socket
+		int addrLen = sizeof(addr);
+		SOCKET remote = accept(listenSock, (sockaddr*)&addr, &addrLen);
+		log("accepted connection for RCON");
+		if (remote == INVALID_SOCKET) {
+			log("invalid socket error");
+			return;
+		}
+		const int BUFFER_SIZE = 256;
+		//create one-filled buffer
+		char buffer[BUFFER_SIZE + 1];
+		for (int i = 0; i < BUFFER_SIZE + 1; i++) {
+			buffer[i] = 1;
+		}
+		int count; //holds number of received bytes 
+		do {
+			count = recv(remote, (char*)&buffer, BUFFER_SIZE, 0); //receive a chunk (may not be the whole command)
+			buffer[count] = 0; //null-terminate it implicitly
+			//convert to wide string
+			std::string chunkString(buffer, count);
+			std::wstring wideChunkString(chunkString.begin(), chunkString.end() - 1);
+			*command += wideChunkString; //append this chunk to the command
+		} while (buffer[count - 1] != '\n');
+		//we now have the whole command as a wide string
+		closesocket(remote);
+
+		if (command->size() == 0) {
+			continue;
+		}
+
+		//add into command queue
+		queueLock.lock();
+		log("added command to queue: ");
+		logWideString(const_cast<wchar_t*>(command->c_str()));
+		commandQueue.emplace(std::move(command)); //put the command into the queue
+		queueLock.unlock();
+	}
+
+	return;
+}
 
 unsigned long main_thread(void* lpParameter) {
 	log(logo);
@@ -421,6 +579,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, FindFileInPakFiles_1);
 	HOOK_ATTACH(module_base, FindFileInPakFiles_2);
 	HOOK_ATTACH(module_base, GetGameInfo);
+	HOOK_ATTACH(module_base, ConsoleCommand);
 
 
 	// ServerPlugin
@@ -432,6 +591,8 @@ unsigned long main_thread(void* lpParameter) {
 	VirtualProtect(cmd_permission, 1, PAGE_EXECUTE_READWRITE, &d);
 	*cmd_permission = 0xEB; // Patch to JMP
 	VirtualProtect(cmd_permission, 1, d, NULL); //TODO: Convert patch to hook.
+
+	handleRCON(); //this has an infinite loop for commands! Keep this at the end!
 
 	ExitThread(0);
 	return 0;
