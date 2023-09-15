@@ -4,8 +4,6 @@
 #include <psapi.h>
 #include <MinHook/include/MinHook.h>
 #include <iostream>
-#include "include/main.h"
-#include "tiny-json/tiny-json.h"
 #include <deque>
 #include <fcntl.h>
 #include <io.h>
@@ -14,6 +12,11 @@
 #include <mutex>
 #include <queue>
 #include <string>
+//always open output window
+#define _DEBUG
+#include "include/main.h"
+#include "tiny-json/tiny-json.h"
+
 
 //black magic for the linker to get winsock2 to work
 #pragma comment(lib, "Ws2_32.lib")
@@ -559,6 +562,7 @@ unsigned long main_thread(void* lpParameter) {
 	char buff[512];
 	char* dest = buff;
 
+	log("Serializing builds");
 	offsetsLoaded = true;
 	serializeBuilds();
 	// official
@@ -600,6 +604,7 @@ unsigned long main_thread(void* lpParameter) {
 	*cmd_permission = 0xEB; // Patch to JMP
 	VirtualProtect(cmd_permission, 1, d, NULL); //TODO: Convert patch to hook.
 
+	log("Functions hooked. Continuing to RCON");
 	handleRCON(); //this has an infinite loop for commands! Keep this at the end!
 
 	ExitThread(0);
