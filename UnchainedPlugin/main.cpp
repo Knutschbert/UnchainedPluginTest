@@ -345,6 +345,69 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 	}
 }
 
+// Returns position of a substring in command line args or -1
+size_t CmdGetParam(const wchar_t* param)
+{
+	size_t res = std::wstring(GetCommandLineW()).find(param);
+	return (res != std::wstring::npos) ? res : -1;
+}
+
+// Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
+std::wstring CmdParseParam(const wchar_t* param, const wchar_t * addPrefix = L"", const wchar_t * addSuffix = L"")
+{
+	std::wstring commandLine = GetCommandLineW();
+	size_t paramPos = CmdGetParam(param);
+	if (paramPos == -1)
+		return L"";
+
+	size_t offset = paramPos + lstrlenW(param) + 1;
+	size_t paramEnd = commandLine.find(L" ", offset);
+	if (paramPos == -1)
+		return L"";
+	std::wstring res = commandLine.substr(offset, paramEnd - offset);
+
+	/*logWideString(const_cast<wchar_t*>(param));
+	logWideString(const_cast<wchar_t*>(res.c_str()));*/
+	return (addPrefix + res + addSuffix).c_str();
+}
+
+//#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
+DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
+{
+	static wchar_t szBuffer[512];
+
+
+	static bool init = false;
+	if (!init) {
+		auto modStr = CmdParseParam(L"--all-mod-actors", L"?mods=");
+		auto defModStr = CmdParseParam(L"--default-mod-actors", L"?defmods=");
+		auto nextMapStr = CmdParseParam(L"--next-map-name", L"?nextmap=");
+		auto nextModsStr = CmdParseParam(L"--next-map-mod-actors", L"?nextmods=");
+
+		/*
+		if (!modStr.empty())
+			wprintf(L"?mods=%ls", modStr.c_str());
+		if (!nextMapStr.empty())
+			wprintf(L"?nextmap=%ls", nextMapStr.c_str());
+		if (!nextModsStr.empty())
+			wprintf(L"?nextmods=%ls", nextModsStr.c_str());
+		if (!defModStr.empty())
+			wprintf(L"?defmods=%ls\n", defModStr.c_str());
+		*/
+
+		log("Frontend Map params: ");
+		wsprintfW(szBuffer, L"Frontend%ls%ls%ls%ls%ls", (CmdGetParam(L"-rcon") == -1) ? L"" : L"?rcon", modStr.c_str(), nextMapStr.c_str(), nextModsStr.c_str(), defModStr.c_str());
+		logWideString(szBuffer);
+		std::wstring ws(param_1->str);
+		std::string nameStr = std::string(ws.begin(), ws.end());
+		//printf("LoadFrontEndMap: %s %d\n", nameStr.c_str(), param_1->max_letters);
+		init = true;
+		return o_LoadFrontEndMap(this_ptr, new FString(szBuffer));
+	}
+	else
+		return o_LoadFrontEndMap(this_ptr, param_1);
+}
+
 int LoadBuildConfig()
 {
 	// load config file
@@ -530,6 +593,10 @@ void handleRCON() {
 unsigned long main_thread(void* lpParameter) {
 	log(logo);
 	log("Chivalry 2 Unchained Plugin");
+	log("\nCommand line args:\n");
+	logWideString(GetCommandLineW());
+	log("\n");
+
 	MH_Initialize();
 
 	// https://github.com/HoShiMin/Sig
@@ -595,6 +662,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, FindFileInPakFiles_2);
 	HOOK_ATTACH(module_base, GetGameInfo);
 	HOOK_ATTACH(module_base, ConsoleCommand);
+	HOOK_ATTACH(module_base, LoadFrontEndMap);
 
 
 	// ServerPlugin
