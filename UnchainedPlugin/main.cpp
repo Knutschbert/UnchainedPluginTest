@@ -18,6 +18,9 @@
 //black magic for the linker to get winsock2 to work
 #pragma comment(lib, "Ws2_32.lib")
 
+//always open output window
+#define _DEBUG
+
 //#define TARGET_API_ROOT L"localhost"
 #define TARGET_API_ROOT L"servers.polehammer.net"
 #ifdef _DEBUG
