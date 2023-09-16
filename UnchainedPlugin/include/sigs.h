@@ -13,6 +13,7 @@
 	etype(UTBLLocalPlayer_Exec) \
 	etype(GetGameInfo) \
 	etype(ConsoleCommand) \
+	etype(LoadFrontEndMap) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -82,5 +83,7 @@ static const char* signatures[] =
 	"48 8B C4 48 89 58 ?? 48 89 50 ?? 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC E0 02 00 00",
 	/*ConsoleCommand*/
 	"40 53 48 83 EC 20 48 8B 89 D0 02 00 00 48 8B DA 48 85 C9 74 0E E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 20 5B C3 33 C0 48 89 02 48 \
-	89 42 08 48 8B C3 48 83 C4 20 5B C3"
+	89 42 08 48 8B C3 48 83 C4 20 5B C3",
+	/*LoadFrontEndMap*/
+	"48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 48 8D 6C 24 D0 48 81 EC 30 01 00 00 4C 8B E2"
 };
