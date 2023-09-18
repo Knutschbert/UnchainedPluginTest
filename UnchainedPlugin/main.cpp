@@ -12,6 +12,9 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include <iostream>
+#include <sstream>
+#include <direct.h>
 //always open output window
 #define _DEBUG
 #include "include/main.h"
@@ -34,6 +37,7 @@
 
 #include <cstdint>
 #include <nmmintrin.h> // SSE4.2 intrinsics
+#include <regex>
 
 struct BuildType {
 	~BuildType() {
@@ -272,15 +276,17 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 
 std::mutex queueLock;
 std::queue<std::unique_ptr<std::wstring>> commandQueue;
+static void* cached_this;
+static FString const* cached_str;
 DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b)) {
-	static void* cached_this;
 	if (this_ptr == NULL) {
 		this_ptr = cached_this;
 	}
 	else {
 		cached_this = this_ptr;
+		cached_str = &str;
 	}
-#ifdef _DEBUG
+#ifdef _DEBUG_
 	log("[RCON][DEBUG]: PlayerController Exec called with:");
 	logWideString(str.str);
 #endif
@@ -288,7 +294,7 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
-#ifdef _DEBUG
+#ifdef _DEBUG_
 		log("[RCON][DEBUG]: Intercept command detected");
 #endif
 		queueLock.lock();
@@ -349,7 +355,10 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 size_t CmdGetParam(const wchar_t* param)
 {
 	size_t res = std::wstring(GetCommandLineW()).find(param);
-	return (res != std::wstring::npos) ? res : -1;
+	bool found = (res != std::wstring::npos);
+	
+	//wprintf(L"CmdGetParam: %ls %ls %d\n", param, (found ? L":) found" : L":( not found"), found ? res : -1);
+	return found ? res : -1;
 }
 
 // Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
@@ -406,6 +415,141 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 	}
 	else
 		return o_LoadFrontEndMap(this_ptr, param_1);
+}
+
+bool extractPlayerCommand(const wchar_t* input, std::wstring& playerName, std::wstring& command) {
+	// Define the regular expression pattern
+	std::wregex pattern(L"(.+) <0>: /cmd (.+)");
+
+	// Convert the input to a wstring
+	std::wstring inputString(input);
+
+	// Define a wsmatch object to store the matched groups
+	std::wsmatch matches;
+
+	// Try to match the pattern in the input string
+	if (std::regex_search(inputString, matches, pattern)) {
+		if (matches.size() == 3) {
+			playerName = matches[1].str();
+			command = matches[2].str();
+			return true; // Match found
+		}
+	}
+
+	return false; // No match found
+}
+
+#define LOG_PATH ""
+
+bool IsServerStart()
+{
+	bool isHeadless = CmdGetParam(L"-nullrhi") != -1;
+	bool isSetToTravel = CmdGetParam(L"--next-map-name") != -1;
+	return isHeadless || isSetToTravel;
+}
+
+
+DECL_HOOK(void, ExecuteConsoleCommand, (FString2* param)) {
+	log("EXECUTECONSOLECMD:");
+	logWideString(param->str);
+	o_ExecuteConsoleCommand(param);
+}
+
+void* CurGameMode = NULL;
+// ATBLGameMode * __cdecl UTBLSystemLibrary::GetTBLGameMode(UObject *param_1)
+DECL_HOOK(void*, GetTBLGameMode, (void* uobj)) {
+	//log("GetTBLGameMode");
+	CurGameMode = o_GetTBLGameMode(uobj);
+	return CurGameMode;
+}
+
+//FText* __cdecl FText::AsCultureInvariant(FText* __return_storage_ptr__, FString* param_1)
+DECL_HOOK(void*, FText_AsCultureInvariant, (void* ret_ptr, FString2* input)) {
+
+	if (input->str != NULL) {
+		printf("FText_AsCultureInvariant: ");
+		logWideString(input->str);
+	}
+	return o_FText_AsCultureInvariant(ret_ptr, input);
+}
+
+//void __thiscall ATBLGameMode::BroadcastLocalizedChat(ATBLGameMode *this,FText *param_1,Type param_2)
+DECL_HOOK(void, BroadcastLocalizedChat, (void* game_mode, FText* text, uint8_t chat_type)) {
+	log("BroadcastLocalizedChat");
+	return o_BroadcastLocalizedChat(game_mode, text, chat_type);
+}
+
+/*
+void __thiscall
+APlayerController::ClientMessage
+		  (APlayerController *this,FString *param_1,FName param_2,float param_3)
+*/
+DECL_HOOK(void, ClientMessage, (void* this_ptr, FString* param_1, void * param_2, float param_3))
+{
+	std::wstring commandLine = GetCommandLineW();
+	size_t flagLoc = commandLine.find(L"--next-map");
+	bool egs = CmdGetParam(L"-epicapp=Peppermint") != -1;
+	static uint64_t init = false;
+	//log("ClientMessage");
+
+	char* pValue;
+	size_t len;
+	char ladBuff[256];
+	errno_t err = _dupenv_s(&pValue, &len, "LOCALAPPDATA");
+
+	// TODO: make this nicer
+	strncpy_s(ladBuff, 256, pValue, len);
+	strncpy_s(ladBuff + len - 1, 256 - len, "\\Chivalry 2\\Saved\\Logs\\Unchained", 34);
+
+	_mkdir(ladBuff);
+	sprintf_s(ladBuff, 256, "%s\\Chivalry 2\\Saved\\Logs\\Unchained\\ClientMessage%s%s.log",
+		pValue, (IsServerStart() ? "-server" : "-client"), (egs ? "-egs" : "-steam"));
+	if (!init)
+		log(ladBuff);
+	//log(ladBuff);
+	std::wofstream  out(ladBuff, init++ ? std::ios_base::app : std::ios_base::trunc);
+	if (out.is_open())
+		out << init << L":: " << param_1->str << std::endl;
+	else
+		log("Can't open ClientMessage log for writing.");
+
+	/*if (flagLoc == std::wstring::npos) {
+		o_ClientMessage(this_ptr, param_1, param_2, param_3);
+		return;
+	}*/
+
+	static std::wstring playerName;
+	auto command = std::make_unique<std::wstring>();
+
+	if (extractPlayerCommand(param_1->str, playerName, *command)) {
+		std::wcout << L"Player Name: " << playerName << std::endl;
+		std::wcout << L"Command: " << command->c_str() << std::endl;
+
+		FText txt;
+		void * res = o_FText_AsCultureInvariant(&txt, new FString2(L"Hello from UnchainedPlugin"));
+		if (res != NULL && CurGameMode != NULL)
+		{
+			log("We Gucci");
+			o_BroadcastLocalizedChat(CurGameMode, (FText *)res, 3);
+		}
+
+		queueLock.lock();
+		log("Executing command");
+		logWideString(const_cast<wchar_t*>(command->c_str()));
+		//commandQueue.emplace(std::move(command)); //put the command into the queue
+		queueLock.unlock();
+		auto empty = FString2(command->c_str());
+
+		o_ExecuteConsoleCommand(&empty);
+		if (false) {
+			wcscpy_s(param_1->str, lstrlenW(param_1->str) + 1, command->c_str());
+			o_ConsoleCommand(cached_this, *param_1, false);
+		}
+	}
+	else {
+		//std::wcout << L"No valid match found." << std::endl;
+	}
+	o_ClientMessage(this_ptr, param_1, param_2, param_3);
 }
 
 int LoadBuildConfig()
@@ -590,6 +734,14 @@ void handleRCON() {
 	return;
 }
 
+inline static void Nop(unsigned char* address, int size)
+{
+	unsigned long protect[2];
+	VirtualProtect((void*)address, size, PAGE_EXECUTE_READWRITE, &protect[0]);
+	memset((void*)address, 0x90, size);
+	VirtualProtect((void*)address, size, protect[0], &protect[1]);
+}
+
 unsigned long main_thread(void* lpParameter) {
 	log(logo);
 	log("Chivalry 2 Unchained Plugin");
@@ -663,8 +815,12 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, GetGameInfo);
 	HOOK_ATTACH(module_base, ConsoleCommand);
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
-
-
+	HOOK_ATTACH(module_base, ClientMessage);
+	HOOK_ATTACH(module_base, ExecuteConsoleCommand);
+	HOOK_ATTACH(module_base, GetTBLGameMode);
+	HOOK_ATTACH(module_base, FText_AsCultureInvariant);
+	HOOK_ATTACH(module_base, BroadcastLocalizedChat);
+	
 	// ServerPlugin
 	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
 
@@ -674,6 +830,8 @@ unsigned long main_thread(void* lpParameter) {
 	VirtualProtect(cmd_permission, 1, PAGE_EXECUTE_READWRITE, &d);
 	*cmd_permission = 0xEB; // Patch to JMP
 	VirtualProtect(cmd_permission, 1, d, NULL); //TODO: Convert patch to hook.
+	ExitThread(0);
+	
 
 	log("Functions hooked. Continuing to RCON");
 	handleRCON(); //this has an infinite loop for commands! Keep this at the end!
