@@ -131,17 +131,24 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	}
 }
 
-DECL_HOOK(void*, CanUseLoadoutItem, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* InLoadOutSelection, const void* InItem)) {
-	log("CanUseLoadoutItem called");
-	auto response = o_CanUseLoadoutItem(_this, result, InLoadOutSelection, InItem);
+DECL_HOOK(FOwnershipResponse*, CanUseLoadoutItem, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* InLoadOutSelection, const void* InItem)) {
+	//log("CanUseLoadoutItem called");
+	auto response = o_CanUseLoadoutItem(_this, result, InLoadOutSelection, InItem); response->owned = true;
+	response->level = 0;
+	printf("CanUseLoadoutItem response:\n  owned %u\n  crowns %u\n  gold %u\n  usdCents %u\n  levelType (%u) %s\n  level %u\n",
+		response->owned, response->crowns, response->gold, response->usdCents, response->levelType, EOnlineStatStr[response->levelType], response->level);
 	result->owned = true;
 	return response;
 }
 
 DECL_HOOK(FOwnershipResponse*, CanUseCharacter, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* CharacterSubclass)) {
-	log("CanUseCharacter called");
-	auto response = o_CanUseCharacter(_this, result, CharacterSubclass);
+	//log("CanUseCharacter called");
+	auto response = o_CanUseCharacter(_this, result, CharacterSubclass); 
 	response->owned = true;
+	response->level = 0;
+	printf(" CanUseCharacter response:\n  owned %u\n  crowns %u\n  gold %u\n  usdCents %u\n  levelType (%u)  %s\n  level %u\n",
+		result->owned, response->crowns, result->gold, result->usdCents, response->levelType, EOnlineStatStr[response->levelType], result->level);
+	
 	return response;
 }
 
@@ -152,7 +159,7 @@ DECL_HOOK(bool, ServerSetLoadout_Validate, (ATBLPlayerController* _this, void* R
 
 DECL_HOOK(bool, ServerSetLoadout, (ATBLPlayerController* _this, void* RequestedSubclass, void* RequestedLoadout)) {
 	log("ServerSetLoadout called");
-	return o_ServerSetLoadout(_this, RequestedLoadout, RequestedLoadout);
+	return o_ServerSetLoadout(_this, RequestedSubclass, RequestedLoadout);
 }
 
 DECL_HOOK(void*, ClientApprovedLoadout_Implementation, (ATBLPlayerController* _this, bool isLoadoutApproved, void* RequestedSubclass, void* RequestedLoadout)) {
