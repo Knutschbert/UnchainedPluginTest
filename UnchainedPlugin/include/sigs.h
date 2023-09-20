@@ -14,6 +14,12 @@
 	etype(GetGameInfo) \
 	etype(ConsoleCommand) \
 	etype(LoadFrontEndMap) \
+	etype(CanUseLoadoutItem) \
+	etype(CanUseCharacter) \
+	etype(ServerSetLoadout_Validate) \
+	etype(ClientApprovedLoadout_Implmentation) \
+	etype(GetAllowedCharacterClasses) \
+	etype(ServerSetLoadout) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -85,5 +91,17 @@ static const char* signatures[] =
 	"40 53 48 83 EC 20 48 8B 89 D0 02 00 00 48 8B DA 48 85 C9 74 0E E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 20 5B C3 33 C0 48 89 02 48 \
 	89 42 08 48 8B C3 48 83 C4 20 5B C3",
 	/*LoadFrontEndMap*/
-	"48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 48 8D 6C 24 D0 48 81 EC 30 01 00 00 4C 8B E2"
+	"48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 48 8D 6C 24 D0 48 81 EC 30 01 00 00 4C 8B E2",
+	/*ATBLPlayerController::CanUseLoadoutItem*/
+	"48 89 5C 24 08 48 89 74 24 10 55 57 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00",
+	/*ATBLPlayerController::CanUseCharacter*/
+	"48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 50 49 8B 18",
+	/*ATBLPlayerController::ServerSetLoadout_Validate*/
+	"48 89 5C 24 08 57 48 83 EC 20 48 8B B9 60 02 00 00 48 8B DA",
+	/*ClientApprovedLoadout_Implementation*/
+	"48 8B C4 48 83 EC 78 41 0F 10 01",
+	/*GetAllowedCharacterClasses*/
+	"48 89 5C 24 10 48 89 74 24 18 48 89 7C 24 20 55 41 54 41 56 48 8B EC 48 83 EC 40",
+	/*ATBLPlayerController::ServerSetLoadout*/
+	"48 89 5C 24 08 57 48 83 EC 60 41 0F 10 00 48 8B 01 48 8B F9 41 0F 10 48 10 48 89 54 24 20 48 8B 15 ?? ?? ?? ?? 48 8B 98 10 02 00 00 0F 11 44 24 28 41 0F 10 40 20 0F 11 4C 24 38 F2"
 };

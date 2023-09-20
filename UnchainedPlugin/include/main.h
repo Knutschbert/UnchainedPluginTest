@@ -52,6 +52,17 @@ struct GetCurrentGamesRequest {
 	FString token;
 };
 
+struct FOwnershipResponse {
+	bool owned;
+	int32_t crowns;
+	int32_t gold;
+	int32_t usdCents;
+	int32_t levelType;
+	int32_t level;
+};
+
+struct ATBLPlayerController { };
+
 // Helper functions
 
 void log(const char* str) {
@@ -61,6 +72,7 @@ void log(const char* str) {
 	std::cout << str << std::endl;
 
 }
+
 
 int logWideString(wchar_t* str) {
 #ifndef _DEBUG

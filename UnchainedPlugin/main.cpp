@@ -131,6 +131,40 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	}
 }
 
+DECL_HOOK(void*, CanUseLoadoutItem, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* InLoadOutSelection, const void* InItem)) {
+	log("CanUseLoadoutItem called");
+	auto response = o_CanUseLoadoutItem(_this, result, InLoadOutSelection, InItem);
+	result->owned = true;
+	return response;
+}
+
+DECL_HOOK(FOwnershipResponse*, CanUseCharacter, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* CharacterSubclass)) {
+	log("CanUseCharacter called");
+	auto response = o_CanUseCharacter(_this, result, CharacterSubclass);
+	response->owned = true;
+	return response;
+}
+
+DECL_HOOK(bool, ServerSetLoadout_Validate, (ATBLPlayerController* _this, void* RequestedSubclass, void* RequestedLoadout)) {
+	log("ServerSetLoadout_Validate called");
+	return true;
+}
+
+DECL_HOOK(bool, ServerSetLoadout, (ATBLPlayerController* _this, void* RequestedSubclass, void* RequestedLoadout)) {
+	log("ServerSetLoadout called");
+	return o_ServerSetLoadout(_this, RequestedLoadout, RequestedLoadout);
+}
+
+DECL_HOOK(void*, ClientApprovedLoadout_Implementation, (ATBLPlayerController* _this, bool isLoadoutApproved, void* RequestedSubclass, void* RequestedLoadout)) {
+	log("ClientApprovedLoadout_Implementation called");
+	return o_ClientApprovedLoadout_Implementation(_this, true, RequestedSubclass, RequestedLoadout);
+}
+
+DECL_HOOK(void*, GetAllowedCharacterClasses, (ATBLPlayerController* _this, void* result)) {
+	log("GetAllowedCharacterClasses called");
+	return o_GetAllowedCharacterClasses(_this, result);
+}
+
 DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FString* bodyContentPtr, FString* authKeyHeaderPtr, FString* authKeyValuePtr)) {
 	if (fullUrlInputPtr->letter_count > 0 &&
 		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", fullUrlInputPtr->str) == 0)
@@ -280,17 +314,10 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	else {
 		cached_this = this_ptr;
 	}
-#ifdef _DEBUG
-	log("[RCON][DEBUG]: PlayerController Exec called with:");
-	logWideString(str.str);
-#endif
 	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
-#ifdef _DEBUG
-		log("[RCON][DEBUG]: Intercept command detected");
-#endif
 		queueLock.lock();
 		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
 			//check if the intercept command is large enough to contain the substitute command
