@@ -690,6 +690,12 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, GetGameInfo);
 	HOOK_ATTACH(module_base, ConsoleCommand);
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
+	HOOK_ATTACH(module_base, CanUseLoadoutItem);
+	HOOK_ATTACH(module_base, CanUseCharacter);
+	HOOK_ATTACH(module_base, ServerSetLoadout_Validate);
+	HOOK_ATTACH(module_base, ClientApprovedLoadout_Implementation);
+	HOOK_ATTACH(module_base, GetAllowedCharacterClasses);
+	HOOK_ATTACH(module_base, ServerSetLoadout);
 
 
 	// ServerPlugin

@@ -17,7 +17,7 @@
 	etype(CanUseLoadoutItem) \
 	etype(CanUseCharacter) \
 	etype(ServerSetLoadout_Validate) \
-	etype(ClientApprovedLoadout_Implmentation) \
+	etype(ClientApprovedLoadout_Implementation) \
 	etype(GetAllowedCharacterClasses) \
 	etype(ServerSetLoadout) \
 	etype(MaxFuncType) //this always needs to be last
