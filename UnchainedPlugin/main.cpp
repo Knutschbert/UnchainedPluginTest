@@ -144,8 +144,8 @@ DECL_HOOK(FOwnershipResponse*, CanUseLoadoutItem, (ATBLPlayerController* _this, 
 
 DECL_HOOK(FOwnershipResponse*, CanUseCharacter, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* CharacterSubclass)) {
 	auto response = o_CanUseCharacter(_this, result, CharacterSubclass); 
-	response->owned = true;
 	response->level = 0;
+	response->owned = true;
 	return response;
 }
 
