@@ -12,10 +12,14 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include "tiny-json/tiny-json.h"
+
 //always open output window
 #define _DEBUG
+
 #include "include/main.h"
-#include "tiny-json/tiny-json.h"
+#include "include/Chivalry2.h"
+#include "include/UE4.h"
 
 
 //black magic for the linker to get winsock2 to work
@@ -132,45 +136,19 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 }
 
 DECL_HOOK(FOwnershipResponse*, CanUseLoadoutItem, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* InLoadOutSelection, const void* InItem)) {
-	//log("CanUseLoadoutItem called");
 	auto response = o_CanUseLoadoutItem(_this, result, InLoadOutSelection, InItem); response->owned = true;
 	response->level = 0;
-	printf("CanUseLoadoutItem response:\n  owned %u\n  crowns %u\n  gold %u\n  usdCents %u\n  levelType (%u) %s\n  level %u\n",
-		response->owned, response->crowns, response->gold, response->usdCents, response->levelType, EOnlineStatStr[response->levelType], response->level);
 	result->owned = true;
 	return response;
 }
 
 DECL_HOOK(FOwnershipResponse*, CanUseCharacter, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* CharacterSubclass)) {
-	//log("CanUseCharacter called");
 	auto response = o_CanUseCharacter(_this, result, CharacterSubclass); 
 	response->owned = true;
 	response->level = 0;
-	printf(" CanUseCharacter response:\n  owned %u\n  crowns %u\n  gold %u\n  usdCents %u\n  levelType (%u)  %s\n  level %u\n",
-		result->owned, response->crowns, result->gold, result->usdCents, response->levelType, EOnlineStatStr[response->levelType], result->level);
-	
 	return response;
 }
 
-DECL_HOOK(bool, ServerSetLoadout_Validate, (ATBLPlayerController* _this, void* RequestedSubclass, void* RequestedLoadout)) {
-	log("ServerSetLoadout_Validate called");
-	return true;
-}
-
-DECL_HOOK(bool, ServerSetLoadout, (ATBLPlayerController* _this, void* RequestedSubclass, void* RequestedLoadout)) {
-	log("ServerSetLoadout called");
-	return o_ServerSetLoadout(_this, RequestedSubclass, RequestedLoadout);
-}
-
-DECL_HOOK(void*, ClientApprovedLoadout_Implementation, (ATBLPlayerController* _this, bool isLoadoutApproved, void* RequestedSubclass, void* RequestedLoadout)) {
-	log("ClientApprovedLoadout_Implementation called");
-	return o_ClientApprovedLoadout_Implementation(_this, true, RequestedSubclass, RequestedLoadout);
-}
-
-DECL_HOOK(void*, GetAllowedCharacterClasses, (ATBLPlayerController* _this, void* result)) {
-	log("GetAllowedCharacterClasses called");
-	return o_GetAllowedCharacterClasses(_this, result);
-}
 
 DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FString* bodyContentPtr, FString* authKeyHeaderPtr, FString* authKeyValuePtr)) {
 	if (fullUrlInputPtr->letter_count > 0 &&
@@ -699,11 +677,6 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
 	HOOK_ATTACH(module_base, CanUseLoadoutItem);
 	HOOK_ATTACH(module_base, CanUseCharacter);
-	HOOK_ATTACH(module_base, ServerSetLoadout_Validate);
-	HOOK_ATTACH(module_base, ClientApprovedLoadout_Implementation);
-	HOOK_ATTACH(module_base, GetAllowedCharacterClasses);
-	HOOK_ATTACH(module_base, ServerSetLoadout);
-
 
 	// ServerPlugin
 	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
