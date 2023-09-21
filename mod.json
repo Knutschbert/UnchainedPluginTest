@@ -1,8 +1,0 @@
-{
-  "name": "Server Browser Plugin",
-  "description": "Enables browsing community hosted private servers.",
-  "image_url": null,
-  "mod_type": "CLIENT_ONLY_PLUGIN",
-  "authors": ["aeroese", "nihilianth", "reciate"],
-  "tags": ["host", "private server"],
-}
