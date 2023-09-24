@@ -104,6 +104,8 @@
   <ItemGroup>
     <ClInclude Include="include\main.h" />
     <ClInclude Include="include\sigs.h" />
+    <ClCompile Include="include\UE4.h" />
+    <ClCompile Include="include\Chivalry2.h" />
     <ClInclude Include="Lib\json.hpp" />
     <ClInclude Include="Lib\MinHook\include\MinHook.h" />
     <ClInclude Include="Lib\MinHook\src\buffer.h" />

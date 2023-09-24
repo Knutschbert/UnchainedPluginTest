@@ -12,12 +12,13 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include "tiny-json/tiny-json.h"
+
 //always open output window
 #define _DEBUG
-//If outputs should be verbose. Uncomment below for console-spam
-//#define _VERBOSE
 #include "include/main.h"
-#include "tiny-json/tiny-json.h"
+#include "include/Chivalry2.h"
+#include "include/UE4.h"
 
 
 //black magic for the linker to get winsock2 to work
@@ -132,6 +133,21 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 		throw;
 	}
 }
+
+DECL_HOOK(FOwnershipResponse*, CanUseLoadoutItem, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* InLoadOutSelection, const void* InItem)) {
+	auto response = o_CanUseLoadoutItem(_this, result, InLoadOutSelection, InItem); response->owned = true;
+	response->level = 0;
+	result->owned = true;
+	return response;
+}
+
+DECL_HOOK(FOwnershipResponse*, CanUseCharacter, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* CharacterSubclass)) {
+	auto response = o_CanUseCharacter(_this, result, CharacterSubclass); 
+	response->level = 0;
+	response->owned = true;
+	return response;
+}
+
 
 DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FString* bodyContentPtr, FString* authKeyHeaderPtr, FString* authKeyValuePtr)) {
 	if (fullUrlInputPtr->letter_count > 0 &&
@@ -282,7 +298,7 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	else {
 		cached_this = this_ptr;
 	}
-#ifdef _VERBOSE
+#ifdef _DEBUG
 	log("[RCON][DEBUG]: PlayerController Exec called with:");
 	logWideString(str.str);
 #endif
@@ -290,7 +306,7 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
-#ifdef _VERBOSE
+#ifdef _DEBUG
 		log("[RCON][DEBUG]: Intercept command detected");
 #endif
 		queueLock.lock();
@@ -669,7 +685,8 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, GetGameInfo);
 	HOOK_ATTACH(module_base, ConsoleCommand);
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
-
+	HOOK_ATTACH(module_base, CanUseLoadoutItem);
+	HOOK_ATTACH(module_base, CanUseCharacter);
 
 	// ServerPlugin
 	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)

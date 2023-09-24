@@ -17,41 +17,6 @@ _________  .__     .__                .__                    ________
                \/      \/      \/      \/          \/      \/      \/      
 )";
 
-// UE Types
-struct FString {
-	FString(const wchar_t* str) {
-		this->letter_count = lstrlenW(str) + 1;
-		this->max_letters = this->letter_count;
-		this->str = const_cast<wchar_t*>(str);
-	}
-
-	wchar_t* str;
-	int letter_count;
-	int max_letters;
-};
-
-//FViewport* __thiscall FViewport::FViewport(FViewport* this, FViewportClient* param_1)
-struct FViewport_C
-{
-	uint8_t ph[0x20];
-	FString AppVersionString;
-};
-
-struct GCGObj {
-	FString url_base;
-};
-
-struct GetMotdRequest {
-	uint8_t ph[0xD8];
-	FString token;
-};
-
-// Technically the same as GetMotdRequest for now. Just figure they should be decoupled.
-struct GetCurrentGamesRequest {
-	uint8_t ph[0xD8];
-	FString token;
-};
-
 // Helper functions
 
 void log(const char* str) {
