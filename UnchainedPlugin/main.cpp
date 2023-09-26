@@ -20,12 +20,10 @@
 #include "include/Chivalry2.h"
 #include "include/UE4.h"
 
-
 //black magic for the linker to get winsock2 to work
 #pragma comment(lib, "Ws2_32.lib")
 
 //always open output window
-#define _DEBUG
 
 //#define TARGET_API_ROOT L"localhost"
 #define TARGET_API_ROOT L"servers.polehammer.net"
@@ -54,7 +52,7 @@ struct BuildType {
 
 	uint32_t fileHash = 0;
 	uint32_t buildId = 0;
-	uint32_t offsets[F_MaxFuncType] = {};
+	uint64_t offsets[F_MaxFuncType] = {};
 	std::string nameStr = "";
 private:
 	char* name = nullptr;
@@ -87,7 +85,9 @@ uint32_t calculateCRC32(const std::string& filename) {
 
 // Browser plugin
 DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, void* a4)) {
-	log("GetMotd Called");
+	auto logger = el::Loggers::getLogger("GetMotd");
+
+	logger->debug("GetMotd Called");
 
 	auto old_base = this_ptr->url_base;
 
@@ -100,7 +100,7 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 		void* res = o_GetMotd(this_ptr, a2, request, a4);
 		this_ptr->url_base = old_base;
 		request->token = originalToken;
-		log("GetMotd returned");
+		logger->debug("GetMotd returned");
 		return res;
 	}
 	catch (...) {
@@ -111,7 +111,9 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 }
 
 DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRequest* request, void* a4)) {
-	log("GetCurrentGames called");
+	auto logger = el::Loggers::getLogger("GetCurrentGames");
+
+	logger->debug("GetCurrentGames called");
 
 	auto old_base = this_ptr->url_base;
 
@@ -124,7 +126,7 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 		void* res = o_GetCurrentGames(this_ptr, a2, request, a4);
 		this_ptr->url_base = old_base;
 		request->token = originalToken;
-		log("GetMotd returned");
+		logger->debug("GetMotd returned");
 		return res;
 	}
 	catch (...) {
@@ -153,9 +155,11 @@ DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FStri
 	if (fullUrlInputPtr->letter_count > 0 &&
 		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", fullUrlInputPtr->str) == 0)
 	{
+		auto logger = el::Loggers::getLogger("SendRequest");
+
 		FString original = *fullUrlInputPtr; //save original string and buffer information
 		*fullUrlInputPtr = FString(PROTOCOL L"://" TARGET_API_ROOT "/api/playfab/Client/Matchmake"); //overwrite with new string
-		log("hk_SendRequest Client/Matchmake");
+		logger->debug("hk_SendRequest Client/Matchmake");
 
 		auto empty = FString(L""); // Send empty string for auth, so that our backend isn't getting user tokens.
 		try {
@@ -203,10 +207,10 @@ DECL_HOOK(long long, IsNonPakFilenameAllowed, (void* this_ptr, void* InFilename)
 //UUserFeedbackAndBugReportsLibrary::GetGameInfo(FString* __return_storage_ptr__, UWorld* param_1)
 DECL_HOOK(FString*, GetGameInfo, (FString* ret_ptr, void* uWorld))
 {
+	auto logger = el::Loggers::getLogger("GetGameInfo");
+
 	auto val = o_GetGameInfo(ret_ptr, uWorld);
-#ifdef _DEBUG
-	std::wcout << "GetGameInfo: " << *val->str << std::endl;
-#endif
+	logger->info("GetGameInfo: %v", *val->str);
 	return val;
 }
 
@@ -218,6 +222,8 @@ bool needsSerialization = true;
 
 void serializeBuilds()
 {
+	auto logger = el::Loggers::getLogger("serializeBuilds");
+
 	char buff[2048];
 	char* dest = buff;
 	if (curBuild.buildId > 0)
@@ -234,7 +240,8 @@ void serializeBuilds()
 		strncpy_s(ladBuff, 512 * sizeof(char), pValue, len);
 		strncpy_s(ladBuff + len - 1, 256 - len, "\\Chivalry 2\\Saved\\Config\\c2uc.builds.json", 42);
 
-		printf("Config written to:\n\t%s\n", ladBuff);
+		logger->info("Config written to: %v", ladBuff);
+
 		std::ofstream out(ladBuff);
 
 		out << "\n{\n\"" << ((curBuild.nameStr.length() > 0) ? curBuild.nameStr.c_str() : "") << "\": {";
@@ -275,15 +282,15 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 		}
 		if (curBuild.nameStr.length() > 0)
 		{
-			printf("Build String found!%s\n\t%s\n", (curBuild.buildId == 0) ? "" : " (loaded)", curBuild.nameStr.c_str());
+			auto logger = el::Loggers::getLogger("FViewport");
+
+			logger->info("Build String found!%v", (curBuild.buildId == 0) ? "" : " (loaded from config)");
+			logger->info("Build name: %v", curBuild.nameStr.c_str());
 
 			if (offsetsLoaded && needsSerialization)
 				serializeBuilds();
 		}
 
-#ifdef _DEBUG
-		//std::wcout << this_ptr->AppVersionString.str << ": " << buildNr << " " << buildId << std::endl;
-#endif
 	}
 	return val;
 }
@@ -291,6 +298,8 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 std::mutex queueLock;
 std::queue<std::unique_ptr<std::wstring>> commandQueue;
 DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b)) {
+	auto logger = el::Loggers::getLogger("ConsoleCommand");
+
 	static void* cached_this;
 	if (this_ptr == NULL) {
 		this_ptr = cached_this;
@@ -298,22 +307,18 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	else {
 		cached_this = this_ptr;
 	}
-#ifdef _DEBUG
-	log("[RCON][DEBUG]: PlayerController Exec called with:");
-	logWideString(str.str);
-#endif
+	logger->debug("PlayerController Exec called with:");
+	logger->debug(str.str);
 	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
-#ifdef _DEBUG
-		log("[RCON][DEBUG]: Intercept command detected");
-#endif
+		logger->debug("Intercept command detected");
 		queueLock.lock();
 		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
 			//check if the intercept command is large enough to contain the substitute command
 			if (wcslen(commandQueue.front()->c_str()) > wcslen(str.str)) {
-				log("[WARNING][RCON]: Intercept command too small to contain substitute command. Command was thrown out.");
+				logger->warn("Intercept command too small to contain substitute command. Command was thrown out.");
 				//throw away the substitute command to keep it from
 				//clogging the queue. In a headless instance, it's unlikely
 				//the intercepted command will ever be larger than it is now.
@@ -321,22 +326,20 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 				queueLock.unlock();
 				return o_ConsoleCommand(this_ptr, str, b);
 			}
+
 			//pull the substitute command off the queue
 			auto command = std::move(commandQueue.front());
 			commandQueue.pop();
 			queueLock.unlock(); //unlock the mutex
-			//log("pretend we ran the command");
+
 			//copy the substitute command over top of the intercepted command
 			wcscpy_s(str.str, lstrlenW(str.str) + 1, command->c_str());
 
-			log((std::string("[RCON]: executing command: ") + wstrtos(std::wstring(str.str))).c_str());
-			//log("[RCON]: command substituted:");
-			//logWideString(str.str);
+			logger->info("[RCON]: executing command: %v", str.str);
 			return o_ConsoleCommand(this_ptr, str, b);
 		}
 		queueLock.unlock();
 	}
-	//std::cout << "0x" << std::hex << this_ptr << std::endl;
 	return o_ConsoleCommand(this_ptr, str, b);
 }
 
@@ -354,8 +357,6 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 		? commandLine.substr(portStart, portEnd - portStart)
 		: commandLine.substr(portStart);
 
-	//log("found port:");
-	//logWideString(const_cast<wchar_t*>(port.c_str()));
 	try {
 		return std::stoi(port);
 	}
@@ -385,19 +386,16 @@ std::wstring CmdParseParam(const wchar_t* param, const wchar_t * addPrefix = L""
 		return L"";
 	std::wstring res = commandLine.substr(offset, paramEnd - offset);
 
-	/*logWideString(const_cast<wchar_t*>(param));
-	logWideString(const_cast<wchar_t*>(res.c_str()));*/
 	return (addPrefix + res + addSuffix).c_str();
 }
 
 //#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
 DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 {
-	static wchar_t szBuffer[512];
-
-
 	static bool init = false;
 	if (!init) {
+		auto logger = el::Loggers::getLogger("LoadFrontEndMap");
+
 		auto modStr = CmdParseParam(L"--all-mod-actors", L"?mods=");
 		auto defModStr = CmdParseParam(L"--default-mod-actors", L"?defmods=");
 		auto nextMapStr = CmdParseParam(L"--next-map-name", L"?nextmap=");
@@ -414,9 +412,11 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 			wprintf(L"?defmods=%ls\n", defModStr.c_str());
 		*/
 
-		log("Frontend Map params: ");
+		static wchar_t szBuffer[512];
+
 		wsprintfW(szBuffer, L"Frontend%ls%ls%ls%ls%ls", (CmdGetParam(L"-rcon") == -1) ? L"" : L"?rcon", modStr.c_str(), nextMapStr.c_str(), nextModsStr.c_str(), defModStr.c_str());
-		logWideString(szBuffer);
+		logger->info("Frontend Map params: %v", szBuffer);
+
 		std::wstring ws(param_1->str);
 		std::string nameStr = std::string(ws.begin(), ws.end());
 		//printf("LoadFrontEndMap: %s %d\n", nameStr.c_str(), param_1->max_letters);
@@ -429,6 +429,8 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 
 int LoadBuildConfig()
 {
+	auto logger = el::Loggers::getLogger("LoadBuildConfig");
+
 	// load config file
 	char* pValue;
 	size_t len;
@@ -469,7 +471,7 @@ int LoadBuildConfig()
 			char const* fileSize = json_getPropertyValue(buildEntry, "FileSize");
 			json_t const* build = json_getProperty(buildEntry, "Build");
 			char const* buildName = json_getName(buildEntry);
-			printf("parsing %s\n", buildName);
+			logger->info("parsing %v", buildName);
 
 			json_t const* fileHash = json_getProperty(buildEntry, "FileHash");
 			if (!fileHash || JSON_INTEGER != json_getType(fileHash)) {
@@ -492,10 +494,10 @@ int LoadBuildConfig()
 			{
 				bd = curBuild;
 				needsSerialization = false;
-				printf("Found matching Build: %s\n", buildName);
+				logger->info("Found matching Build: %v", buildName);
 			}
 
-			printf("%s : %u\n", buildName, strlen(buildName));
+			logger->info("%v : %v", buildName, strlen(buildName));
 
 			if (strlen(buildName) > 0)
 			{
@@ -529,7 +531,10 @@ int LoadBuildConfig()
 
 void handleRCON() {
 	MH_Initialize();
+	
+	auto logger = el::Loggers::getLogger("RCON");
 
+	
 	std::wstring commandLine = GetCommandLineW();
 	size_t flagLoc = commandLine.find(L"-rcon");
 	if (flagLoc == std::wstring::npos) {
@@ -537,7 +542,7 @@ void handleRCON() {
 		return;
 	}
 
-	log("[RCON]: Found -rcon flag. RCON will be enabled.");
+	logger->info("Found -rcon flag. RCON will be enabled.");
 
 	int port = parsePortParams(commandLine, flagLoc);
 	if (port == -1) {
@@ -546,12 +551,12 @@ void handleRCON() {
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		log("[RCON][FATAL]: Failed to initialize Winsock!");
+		logger->fatal("Failed to initialize Winsock!");
 		ExitThread(0);
 		return;
 	}
 
-	log((std::string("[RCON][INFO]: Opening RCON server socket on TCP/") + std::to_string(port)).c_str());
+	logger->info(std::string("Opening RCON server socket on TCP/") + std::to_string(port));
 
 	SOCKET listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -567,17 +572,13 @@ void handleRCON() {
 	while (true) {
 		//set up a new command string
 		auto command = std::make_unique<std::wstring>();
-#ifdef _VERBOSE
-		log("[RCON]: Waiting for command");
-#endif
+		logger->info("Waiting for command");
 		//get a command from a socket
 		int addrLen = sizeof(addr);
 		SOCKET remote = accept(listenSock, (sockaddr*)&addr, &addrLen);
-#ifdef _VERBOSE
-		log("[RCON]: Accepted connection");
-#endif
+		logger->debug("Accepted connection");
 		if (remote == INVALID_SOCKET) {
-			log("[RCON][FATAL]: invalid socket error");
+			logger->fatal("invalid socket error");
 			return;
 		}
 		const int BUFFER_SIZE = 256;
@@ -604,7 +605,7 @@ void handleRCON() {
 
 		//add into command queue
 		queueLock.lock();
-		log((std::string("[RCON]: received RCON command: ") + wstrtos(*command)).c_str());
+		logger->debug("Received RCON command: %v", *command);
 		commandQueue.emplace(std::move(command)); //put the command into the queue
 		queueLock.unlock();
 	}
@@ -612,12 +613,13 @@ void handleRCON() {
 	return;
 }
 
+
 unsigned long main_thread(void* lpParameter) {
-	log(logo);
-	log("Chivalry 2 Unchained Plugin");
-	log("\nCommand line args:\n");
-	logWideString(GetCommandLineW());
-	log("\n");
+	el::Logger* initLogger = el::Loggers::getLogger("INIT");
+
+	initLogger->info(logo);
+	initLogger->info("Chivalry 2 Unchained Plugin");
+	initLogger->info("Command line args: %v", GetCommandLineW());
 
 	MH_Initialize();
 
@@ -630,7 +632,7 @@ unsigned long main_thread(void* lpParameter) {
 	//unsigned long file_size;
 	errno_t err = _sopen_s(&file_descript, "Chivalry2-Win64-Shipping.exe", O_RDONLY, _SH_DENYNO, 0);
 	if (err)
-		std::cout << "error " << err << std::endl;
+		initLogger->error(err);
 
 	// Get the size of the file
 	off_t file_size = _filelength(file_descript);
@@ -644,7 +646,9 @@ unsigned long main_thread(void* lpParameter) {
 	{
 		if (curBuild.offsets[i] == 0)
 			curBuild.offsets[i] = FindSignature(baseAddr, moduleInfo.SizeOfImage, strFunc[i], signatures[i]);
-		else printf("ok -> %s : (conf)\n", strFunc[i]);
+		else 
+			initLogger->info("ok -> %v : (conf)", strFunc[i]);
+
 		if (i == F_FViewport)
 		{
 			HOOK_ATTACH(module_base, FViewport);
@@ -654,7 +658,7 @@ unsigned long main_thread(void* lpParameter) {
 	char buff[512];
 	char* dest = buff;
 
-	log("Serializing builds");
+	initLogger->info("Serializing builds");
 	offsetsLoaded = true;
 	serializeBuilds();
 	// official
@@ -698,14 +702,22 @@ unsigned long main_thread(void* lpParameter) {
 	*cmd_permission = 0xEB; // Patch to JMP
 	VirtualProtect(cmd_permission, 1, d, NULL); //TODO: Convert patch to hook.
 
-	log("Functions hooked. Continuing to RCON");
+	initLogger->info("Functions hooked. Continuing to RCON");
 	handleRCON(); //this has an infinite loop for commands! Keep this at the end!
 
 	ExitThread(0);
 	return 0;
 }
 
+INITIALIZE_EASYLOGGINGPP
+
 int __stdcall DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
+
+	char** emptyArgs = {};
+	START_EASYLOGGINGPP(0, emptyArgs);
+
+	ConfigureLogging();
+
 	#ifdef _DEBUG
 	if (!GetConsoleWindow()) {
 		AllocConsole();

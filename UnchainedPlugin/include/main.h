@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <Sig/Sig.hpp>
 #include "sigs.h"
+#include "Logging.h"
 
 const char* logo = R"( 
 _________  .__     .__                .__                    ________             
@@ -17,21 +18,13 @@ _________  .__     .__                .__                    ________
                \/      \/      \/      \/          \/      \/      \/      
 )";
 
-// Helper functions
-
-void log(const char* str) {
-	if (GetConsoleWindow()) {
-		std::cout << str << std::endl;
-	}
-}
-
 std::string wstrtos(std::wstring in) {
 	//https://stackoverflow.com/a/12097772
 	//don't care about encoding/character truncation
 	std::string str;
 	std::transform(in.begin(), in.end(), std::back_inserter(str), [](wchar_t c) {
 		return (char)c;
-		});
+	});
 
 	return str;
 }
@@ -42,42 +35,29 @@ std::wstring stowstr(std::string in) {
 	std::wstring str;
 	std::transform(in.begin(), in.end(), std::back_inserter(str), [](char c) {
 		return (wchar_t)c;
-		});
-
+	});
 	return str;
 }
 
-//TODO: fix this signature
-int logWideString(wchar_t* loggedString) {
-	if (!GetConsoleWindow()) {
-		return 0;
-	}	
-	
-	std::cout << wstrtos(loggedString) << std::endl;
-	return 0;
-}
-
-
-long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
+uint64_t FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
 {
+	auto logger = el::Loggers::getLogger("FindSignature");
+
+
 	const void* found = nullptr;
 	found = Sig::find(baseAddr, size, signature);
-	long long diff = 0;
+	uint64_t diff = 0;
 	if (found != nullptr)
 	{
-		diff = (long long)found - (long long)baseAddr;
-#ifdef _DEBUG
+		diff = (uint64_t)found - (uint64_t)baseAddr;
 		//std::cout << title << ": 0x" << std::hex << diff << std::endl;
-		printf("?? -> %s : 0x%llx\n", title, diff);
-#endif
+		logger->info("?? -> %v : 0x%v", title, diff);
 	}
-#ifdef _DEBUG
 	else
-		printf("!! -> %s : nullptr\n", title);
+		logger->error("!! -> %v : nullptr", title);
 		//std::cout << title << ": nullptr" << std::endl;
-#endif
 
-		return diff;
+	return diff;
 
 }
 // Hook macros
@@ -94,8 +74,10 @@ MODULEINFO moduleInfo;
 	MH_CreateHook(moduleBase + curBuild.offsets[F_##funcType], hk_##funcType, reinterpret_cast<void**>(&o_##funcType)); \
 	MH_EnableHook(moduleBase + curBuild.offsets[F_##funcType]); 
 
+/*
 #define HOOK_FIND_SIG(funcType) \
 	if (curBuild.offsets[F_##funcType] == 0)\
 		curBuild.offsets[F_##funcType] = FindSignature(baseAddr, moduleInfo.SizeOfImage, #funcType, signatures[F_##funcType]); \
-	else printf("-> %s : (conf)\n", #funcType);
+	else printf("-> %s : (conf)", #funcType);
 	//long long sig_##funcType = FindSignature(baseAddr, moduleInfo.SizeOfImage, #funcType, signatures[F_##funcType]);
+*/

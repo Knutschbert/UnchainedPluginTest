@@ -93,6 +93,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Lib\EasyLoggingPP\easylogging++.cc" />
     <ClCompile Include="Lib\MinHook\src\buffer.c" />
     <ClCompile Include="Lib\MinHook\src\hde\hde32.c" />
     <ClCompile Include="Lib\MinHook\src\hde\hde64.c" />
@@ -102,10 +103,12 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Logging.h" />
     <ClInclude Include="include\main.h" />
     <ClInclude Include="include\sigs.h" />
     <ClCompile Include="include\UE4.h" />
     <ClCompile Include="include\Chivalry2.h" />
+    <ClInclude Include="Lib\EasyLoggingPP\easylogging++.h" />
     <ClInclude Include="Lib\json.hpp" />
     <ClInclude Include="Lib\MinHook\include\MinHook.h" />
     <ClInclude Include="Lib\MinHook\src\buffer.h" />
