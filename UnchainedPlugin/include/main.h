@@ -18,27 +18,6 @@ _________  .__     .__                .__                    ________
                \/      \/      \/      \/          \/      \/      \/      
 )";
 
-std::string wstrtos(std::wstring in) {
-	//https://stackoverflow.com/a/12097772
-	//don't care about encoding/character truncation
-	std::string str;
-	std::transform(in.begin(), in.end(), std::back_inserter(str), [](wchar_t c) {
-		return (char)c;
-	});
-
-	return str;
-}
-
-std::wstring stowstr(std::string in) {
-	//https://stackoverflow.com/a/12097772
-	//don't care about encoding/character truncation
-	std::wstring str;
-	std::transform(in.begin(), in.end(), std::back_inserter(str), [](char c) {
-		return (wchar_t)c;
-	});
-	return str;
-}
-
 uint64_t FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
 {
 	auto logger = el::Loggers::getLogger("FindSignature");

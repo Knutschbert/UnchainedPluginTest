@@ -100,6 +100,7 @@
     <ClCompile Include="Lib\MinHook\src\hook.c" />
     <ClCompile Include="Lib\MinHook\src\trampoline.c" />
     <ClCompile Include="Lib\tiny-json\tiny-json.c" />
+    <ClCompile Include="Logging.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

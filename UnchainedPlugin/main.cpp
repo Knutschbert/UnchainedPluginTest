@@ -617,9 +617,10 @@ void handleRCON() {
 unsigned long main_thread(void* lpParameter) {
 	el::Logger* initLogger = el::Loggers::getLogger("INIT");
 
+	std::wstring commandLineArgs(GetCommandLineW());
 	initLogger->info(logo);
 	initLogger->info("Chivalry 2 Unchained Plugin");
-	initLogger->info("Command line args: %v", GetCommandLineW());
+	initLogger->info("Command line args: %v", commandLineArgs);
 
 	MH_Initialize();
 
@@ -712,9 +713,6 @@ unsigned long main_thread(void* lpParameter) {
 INITIALIZE_EASYLOGGINGPP
 
 int __stdcall DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
-
-	char** emptyArgs = {};
-	START_EASYLOGGINGPP(0, emptyArgs);
 
 	ConfigureLogging();
 
