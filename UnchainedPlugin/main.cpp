@@ -29,15 +29,12 @@
 #define _DEBUG
 
 //#define TARGET_API_ROOT L"localhost"
-#define TARGET_API_ROOT L"servers.polehammer.net"
-#ifdef _DEBUG
-	#define PROTOCOL L"http"
-#else
-	#define PROTOCOL L"https"
-#endif
 
 #include <cstdint>
 #include <nmmintrin.h> // SSE4.2 intrinsics
+
+#define DEFAULT_SERVER_BROWSER_BACKEND L"http://servers.polehammer.net"
+#define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
 
 struct BuildType {
 	~BuildType() {
@@ -86,6 +83,42 @@ uint32_t calculateCRC32(const std::string& filename) {
 	return crc ^ 0xFFFFFFFF; // Final XOR value for CRC-32
 }
 
+// Returns position of a substring in command line args or -1
+size_t CmdGetParam(const wchar_t* param)
+{
+	size_t res = std::wstring(GetCommandLineW()).find(param);
+	return (res != std::wstring::npos) ? res : -1;
+}
+
+// Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
+std::wstring CmdParseParam(const wchar_t* param, const wchar_t* addPrefix = L"", const wchar_t* addSuffix = L"")
+{
+	std::wstring commandLine = GetCommandLineW();
+	size_t paramPos = CmdGetParam(param);
+	if (paramPos == -1)
+		return L"";
+
+	size_t offset = paramPos + lstrlenW(param) + 1;
+	size_t paramEnd = commandLine.find(L" ", offset);
+	if (paramPos == -1)
+		return L"";
+	std::wstring res = commandLine.substr(offset, paramEnd - offset);
+
+	/*logWideString(const_cast<wchar_t*>(param));
+	logWideString(const_cast<wchar_t*>(res.c_str()));*/
+	return (addPrefix + res + addSuffix).c_str();
+}
+
+std::wstring GetApiUrl(const wchar_t* path) {
+	if (CmdGetParam(SERVER_BROWSER_BACKEND_CLI_ARG) != -1) {
+		return CmdParseParam(SERVER_BROWSER_BACKEND_CLI_ARG, L"", path);
+	}
+	else {
+		std::wstring baseUrl(DEFAULT_SERVER_BROWSER_BACKEND);
+		return baseUrl + path;
+	}
+}
+
 // Browser plugin
 DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, void* a4)) {
 	log("GetMotd Called");
@@ -95,8 +128,10 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 	auto originalToken = request->token;
 	auto emptyToken = FString(L"");
 
+
+
 	try {
-		this_ptr->url_base = FString( PROTOCOL L"://" TARGET_API_ROOT L"/api/tbio");
+		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
 		request->token = emptyToken;
 		void* res = o_GetMotd(this_ptr, a2, request, a4);
 		this_ptr->url_base = old_base;
@@ -120,7 +155,7 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	auto emptyToken = FString(L"");
 
 	try {
-		this_ptr->url_base = FString(PROTOCOL L"://" TARGET_API_ROOT L"/api/tbio");
+		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
 		request->token = emptyToken;
 		void* res = o_GetCurrentGames(this_ptr, a2, request, a4);
 		this_ptr->url_base = old_base;
@@ -155,7 +190,7 @@ DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FStri
 		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", fullUrlInputPtr->str) == 0)
 	{
 		FString original = *fullUrlInputPtr; //save original string and buffer information
-		*fullUrlInputPtr = FString(PROTOCOL L"://" TARGET_API_ROOT "/api/playfab/Client/Matchmake"); //overwrite with new string
+		*fullUrlInputPtr = FString(GetApiUrl(L"/api/playfab/Client/Matchmake").c_str()); //overwrite with new string
 		log("hk_SendRequest Client/Matchmake");
 
 		auto empty = FString(L""); // Send empty string for auth, so that our backend isn't getting user tokens.
@@ -355,32 +390,6 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 	catch (std::exception e) {
 		return -1;
 	}
-}
-
-// Returns position of a substring in command line args or -1
-size_t CmdGetParam(const wchar_t* param)
-{
-	size_t res = std::wstring(GetCommandLineW()).find(param);
-	return (res != std::wstring::npos) ? res : -1;
-}
-
-// Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
-std::wstring CmdParseParam(const wchar_t* param, const wchar_t * addPrefix = L"", const wchar_t * addSuffix = L"")
-{
-	std::wstring commandLine = GetCommandLineW();
-	size_t paramPos = CmdGetParam(param);
-	if (paramPos == -1)
-		return L"";
-
-	size_t offset = paramPos + lstrlenW(param) + 1;
-	size_t paramEnd = commandLine.find(L" ", offset);
-	if (paramPos == -1)
-		return L"";
-	std::wstring res = commandLine.substr(offset, paramEnd - offset);
-
-	/*logWideString(const_cast<wchar_t*>(param));
-	logWideString(const_cast<wchar_t*>(res.c_str()));*/
-	return (addPrefix + res + addSuffix).c_str();
 }
 
 //#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
