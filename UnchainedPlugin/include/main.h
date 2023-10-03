@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <Sig/Sig.hpp>
 #include "sigs.h"
-#include "Logging.h"
+#include "include/Logging.h"
+#include <format>
 
 const char* logo = R"( 
 _________  .__     .__                .__                    ________             
@@ -20,21 +21,18 @@ _________  .__     .__                .__                    ________
 
 uint64_t FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
 {
-	auto logger = el::Loggers::getLogger("FindSignature");
-
-
 	const void* found = nullptr;
 	found = Sig::find(baseAddr, size, signature);
 	uint64_t diff = 0;
 	if (found != nullptr)
 	{
 		diff = (uint64_t)found - (uint64_t)baseAddr;
-		//std::cout << title << ": 0x" << std::hex << diff << std::endl;
-		logger->info("?? -> %v : 0x%v", title, diff);
+
+		LOG_F(INFO, "?? -> %s : 0x%llx", title, diff);
 	}
-	else
-		logger->error("!! -> %v : nullptr", title);
-		//std::cout << title << ": nullptr" << std::endl;
+	else {
+		LOG_F(ERROR, "!! -> %s : nullptr", title);
+	}
 
 	return diff;
 

@@ -46,10 +46,10 @@
     <ClCompile Include="include\Chivalry2.h">
       <Filter>Source Headers</Filter>
     </ClCompile>
-    <ClCompile Include="Lib\EasyLoggingPP\easylogging++.cc">
+    <ClCompile Include="Logging.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Logging.cpp">
+    <ClCompile Include="Lib\loguru\loguru.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -93,7 +93,7 @@
     <ClInclude Include="include\Logging.h">
       <Filter>Source Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Lib\EasyLoggingPP\easylogging++.h">
+    <ClInclude Include="Lib\loguru\loguru.hpp">
       <Filter>Source Headers</Filter>
     </ClInclude>
   </ItemGroup>
