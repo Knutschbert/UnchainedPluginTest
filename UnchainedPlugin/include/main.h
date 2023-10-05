@@ -65,6 +65,16 @@ long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const c
 		return diff;
 
 }
+
+
+inline static void Nop(unsigned char* address, int size)
+{
+	unsigned long protect[2];
+	VirtualProtect((void*)address, size, PAGE_EXECUTE_READWRITE, &protect[0]);
+	memset((void*)address, 0x90, size);
+	VirtualProtect((void*)address, size, protect[0], &protect[1]);
+}
+
 // Hook macros
 
 HMODULE baseAddr;

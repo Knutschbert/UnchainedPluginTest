@@ -25,9 +25,9 @@
 typedef enum { FUNCTYPES }  FuncType;
 #undef etype
 #define etype(x) #x,
-static const char* strFunc[] = { FUNCTYPES };
+static const char* strFunc[F_MaxFuncType + 1] = { FUNCTYPES };
 
-static const char* signatures[] =
+static const char* signatures[F_MaxFuncType + 1] =
 {
 	/*"FViewport"*/
 	"48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 33 ED C7 41 ?? FF FF FF FF",
@@ -91,5 +91,7 @@ static const char* signatures[] =
 	/*ATBLPlayerController::CanUseLoadoutItem*/
 	"48 89 5C 24 08 48 89 74 24 10 55 57 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00",
 	/*ATBLPlayerController::CanUseCharacter*/
-	"48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 50 49 8B 18"
+	"48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 50 49 8B 18",
+	/*MaxFuncType*/
+	""
 };

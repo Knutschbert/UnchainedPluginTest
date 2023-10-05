@@ -128,7 +128,9 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 	auto originalToken = request->token;
 	auto emptyToken = FString(L"");
 
-
+	// Dedicated server hook in ApproveLogin
+	unsigned char* module_base{ reinterpret_cast<unsigned char*>(baseAddr) };
+	Nop(module_base + 0x186c2d6, 6); // TODO: use sigscanning
 
 	try {
 		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
