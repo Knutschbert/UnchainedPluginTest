@@ -16,6 +16,7 @@
 	etype(LoadFrontEndMap) \
 	etype(CanUseLoadoutItem) \
 	etype(CanUseCharacter) \
+	etype(ApproveLogin) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -92,6 +93,8 @@ static const char* signatures[F_MaxFuncType + 1] =
 	"48 89 5C 24 08 48 89 74 24 10 55 57 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00",
 	/*ATBLPlayerController::CanUseCharacter*/
 	"48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 50 49 8B 18",
+	/*ApproveLogin*/
+	"48 89 5C 24 18 48 89 74 24 20 55 57 41 54 41 55 41 56 48 8D 6C 24 C9 48 81 EC A0 00 00 00 8B",
 	/*MaxFuncType*/
 	""
 };

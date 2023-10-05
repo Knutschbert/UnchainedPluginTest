@@ -59,6 +59,11 @@ private:
 };
 
 std::deque<BuildType*> configBuilds;
+//BuildInfo* curBuildInfo = nullptr;
+BuildType curBuild;
+bool jsonDone = false;
+bool offsetsLoaded = false;
+bool needsSerialization = true;
 
 uint32_t calculateCRC32(const std::string& filename) {
 	std::ifstream file(filename, std::ios::binary);
@@ -130,7 +135,7 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 
 	// Dedicated server hook in ApproveLogin
 	unsigned char* module_base{ reinterpret_cast<unsigned char*>(baseAddr) };
-	Nop(module_base + 0x186c2d6, 6); // TODO: use sigscanning
+	Nop(module_base + curBuild.offsets[F_ApproveLogin] + 0x46, 6);
 
 	try {
 		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
@@ -248,11 +253,6 @@ DECL_HOOK(FString*, GetGameInfo, (FString* ret_ptr, void* uWorld))
 	return val;
 }
 
-//BuildInfo* curBuildInfo = nullptr;
-BuildType curBuild;
-bool jsonDone = false;
-bool offsetsLoaded = false;
-bool needsSerialization = true;
 
 void serializeBuilds()
 {
