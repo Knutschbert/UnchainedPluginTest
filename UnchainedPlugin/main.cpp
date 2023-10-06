@@ -397,11 +397,11 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 
 
 	static bool init = false;
-	if (!init) {
+	if (true) {
 		auto pwdStr = CmdParseParam(L"ServerPassword", L"?Password=");
 
 		log("Frontend Map params: ");
-		wsprintfW(szBuffer, L"Frontend%ls%ls", (CmdGetParam(L"-rcon") == -1) ? L"" : L"?rcon", pwdStr.c_str());
+		wsprintfW(szBuffer, L"Frontend%ls%ls%ls", (CmdGetParam(L"-rcon") == -1) ? L"" : L"?rcon", pwdStr.c_str(), init ? L"" : L"?startup");
 		logWideString(szBuffer);
 		std::wstring ws(param_1->str);
 		std::string nameStr = std::string(ws.begin(), ws.end());
@@ -412,6 +412,47 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 	else
 		return o_LoadFrontEndMap(this_ptr, param_1);
 }
+
+void* UWORLD = nullptr;
+DECL_HOOK(uint8_t, InternalGetNetMode, (void* world))
+{
+	UWORLD = world;
+	return o_InternalGetNetMode(world);
+}
+
+bool playableListen = CmdGetParam(L"--playable-listen") != -1;
+DECL_HOOK(bool, UGameplay__IsDedicatedServer, (long long param_1))
+{
+	if (UWORLD != nullptr && !playableListen) {
+		return o_InternalGetNetMode(UWORLD) == 2;
+	}
+	else return o_UGameplay__IsDedicatedServer(param_1);
+}
+
+
+#ifdef PRINT_CLIENT_MSG
+
+/*
+void __thiscall
+APlayerController::ClientMessage
+		  (APlayerController *this,FString *param_1,FName param_2,float param_3)
+*/
+DECL_HOOK(void, ClientMessage, (void* this_ptr, FString* param_1, void* param_2, float param_3))
+{
+	std::wstring commandLine = GetCommandLineW();
+	size_t flagLoc = commandLine.find(L"--next-map");
+	bool egs = CmdGetParam(L"-epicapp=Peppermint") != -1;
+	static uint64_t init = false;
+	log("ClientMessage");
+
+	wprintf(L"CLIENT_MESSAGE: %ls %.2f\n", param_1->str, param_3);
+
+	std::wstring ws(param_1->str);
+	std::string msg_str(ws.begin(), ws.end());
+	o_ClientMessage(this_ptr, param_1, param_2, param_3);
+}
+
+#endif // PRINT_CLIENT_MSG
 
 int LoadBuildConfig()
 {
@@ -640,23 +681,6 @@ unsigned long main_thread(void* lpParameter) {
 	log("Serializing builds");
 	offsetsLoaded = true;
 	serializeBuilds();
-	// official
-	//auto sig_SendRequest= 0x14a1250;
-	//auto sig_GetMotd = 0x13da7d0;
-	//auto sig_GetCurrentGames = 0x13da280;
-	//auto sig_IsNonPakFilenameAllowed = 0x2fc3ce0;
-	//auto sig_FindFileInPakFiles_1 = 0x2fbf1a0;
-	//auto sig_FindFileInPakFiles_2 = 0x2fbf280;
-	//auto sig_UTBLLocalPlayer = 0x199cda3;
-
-	// ptr
-	//auto sig_SendRequest = 0x1425a10;
-	//auto sig_GetMotd = 0x135eb70;
-	//auto sig_GetCurrentGames = 0x135e620;
-	//auto sig_IsNonPakFilenameAllowed = 0x2f4dd80;
-	//auto sig_FindFileInPakFiles_1 = 0x2f49240;
-	//auto sig_FindFileInPakFiles_2 = 0x2f49320;
-	//auto sig_UTBLLocalPlayer = 0x1924926;
 
 	//HOOK_ATTACH(module_base, FViewport);
 	HOOK_ATTACH(module_base, GetMotd);
@@ -670,19 +694,22 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
 	HOOK_ATTACH(module_base, CanUseLoadoutItem);
 	HOOK_ATTACH(module_base, CanUseCharacter);
+	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
+	HOOK_ATTACH(module_base, InternalGetNetMode);
 
-	// ServerPlugin
-	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
+#ifdef PRINT_CLIENT_MSG
+	HOOK_ATTACH(module_base, ClientMessage);
+#endif 
+	
 
-	// 75 1A 45 84 ED 75 15 48 85 F6 74 10 40 38 BE ? ? ? ? 74 07 32 DB E9 ? ? ? ? 48 8B 5D 60 49 8B D6 4C 8B 45 58 4C 8B CB 49 8B CF (Points directly to instruction: first JNZ)
-
-	DWORD d;
-	VirtualProtect(cmd_permission, 1, PAGE_EXECUTE_READWRITE, &d);
-	*cmd_permission = 0xEB; // Patch to JMP
-	VirtualProtect(cmd_permission, 1, d, NULL); //TODO: Convert patch to hook.
-
+	// From ServerPlugin
+	// Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
+	Ptch_Repl(module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec], 0xEB);
+	
+	/*printf("offset dedicated: 0x%08X", curBuild.offsets[F_UGameplay__IsDedicatedServer] + 0x22);
+	Ptch_Repl(module_base + curBuild.offsets[F_UGameplay__IsDedicatedServer] + 0x22, 0x2);*/
 	// Dedicated server hook in ApproveLogin
-	Nop(module_base + curBuild.offsets[F_ApproveLogin] + 0x46, 6);
+	//Nop(module_base + curBuild.offsets[F_ApproveLogin] + 0x46, 6);
 
 	log("Functions hooked. Continuing to RCON");
 	handleRCON(); //this has an infinite loop for commands! Keep this at the end!

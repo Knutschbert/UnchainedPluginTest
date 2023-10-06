@@ -17,6 +17,9 @@
 	etype(CanUseLoadoutItem) \
 	etype(CanUseCharacter) \
 	etype(ApproveLogin) \
+	etype(UGameplay__IsDedicatedServer) \
+	etype(InternalGetNetMode) \
+	etype(ClientMessage) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -95,6 +98,12 @@ static const char* signatures[F_MaxFuncType + 1] =
 	"48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 50 49 8B 18",
 	/*ApproveLogin*/
 	"48 89 5C 24 18 48 89 74 24 20 55 57 41 54 41 55 41 56 48 8D 6C 24 C9 48 81 EC A0 00 00 00 8B",
+	/*UGameplay__IsDedicatedServer*/
+	"48 83 EC 28 48 85 C9 ? ? BA 01 00 00 00 ? ? ? ? ? 48 85 C0 ? ? 48 8B C8 ? ? ? ? ? 83 F8 01 0F 94 C0 48",
+	/*InternalGetNetMode*/
+	"40 53 48 81 EC 90 00 00 00 48 8B D9 48 8B 49 38 48 85 C9 ? ? 48 81 C4 90 00 00 00 5B ? ? ? ? ? 48 8B 8B F0 00 00 00 48",
+	/*ClientMessage*/
+	"4C 8B DC 48 83 EC 58 33 C0 49 89 5B 08 49 89 73 18 49 8B D8 49 89 43 C8 48 8B F1 49 89 43 D0 49 89 43 D8 49 8D 43",
 	/*MaxFuncType*/
 	""
 };
