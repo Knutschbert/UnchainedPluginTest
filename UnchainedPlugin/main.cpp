@@ -133,10 +133,6 @@ DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, 
 	auto originalToken = request->token;
 	auto emptyToken = FString(L"");
 
-	// Dedicated server hook in ApproveLogin
-	unsigned char* module_base{ reinterpret_cast<unsigned char*>(baseAddr) };
-	Nop(module_base + curBuild.offsets[F_ApproveLogin] + 0x46, 6);
-
 	try {
 		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
 		request->token = emptyToken;
@@ -402,24 +398,10 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 
 	static bool init = false;
 	if (!init) {
-		auto modStr = CmdParseParam(L"--all-mod-actors", L"?mods=");
-		auto defModStr = CmdParseParam(L"--default-mod-actors", L"?defmods=");
-		auto nextMapStr = CmdParseParam(L"--next-map-name", L"?nextmap=");
-		auto nextModsStr = CmdParseParam(L"--next-map-mod-actors", L"?nextmods=");
-
-		/*
-		if (!modStr.empty())
-			wprintf(L"?mods=%ls", modStr.c_str());
-		if (!nextMapStr.empty())
-			wprintf(L"?nextmap=%ls", nextMapStr.c_str());
-		if (!nextModsStr.empty())
-			wprintf(L"?nextmods=%ls", nextModsStr.c_str());
-		if (!defModStr.empty())
-			wprintf(L"?defmods=%ls\n", defModStr.c_str());
-		*/
+		auto pwdStr = CmdParseParam(L"ServerPassword", L"?Password=");
 
 		log("Frontend Map params: ");
-		wsprintfW(szBuffer, L"Frontend%ls%ls%ls%ls%ls", (CmdGetParam(L"-rcon") == -1) ? L"" : L"?rcon", modStr.c_str(), nextMapStr.c_str(), nextModsStr.c_str(), defModStr.c_str());
+		wsprintfW(szBuffer, L"Frontend%ls%ls", (CmdGetParam(L"-rcon") == -1) ? L"" : L"?rcon", pwdStr.c_str());
 		logWideString(szBuffer);
 		std::wstring ws(param_1->str);
 		std::string nameStr = std::string(ws.begin(), ws.end());
@@ -698,6 +680,9 @@ unsigned long main_thread(void* lpParameter) {
 	VirtualProtect(cmd_permission, 1, PAGE_EXECUTE_READWRITE, &d);
 	*cmd_permission = 0xEB; // Patch to JMP
 	VirtualProtect(cmd_permission, 1, d, NULL); //TODO: Convert patch to hook.
+
+	// Dedicated server hook in ApproveLogin
+	Nop(module_base + curBuild.offsets[F_ApproveLogin] + 0x46, 6);
 
 	log("Functions hooked. Continuing to RCON");
 	handleRCON(); //this has an infinite loop for commands! Keep this at the end!
