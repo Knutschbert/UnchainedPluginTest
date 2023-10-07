@@ -431,7 +431,6 @@ DECL_HOOK(bool, UGameplay__IsDedicatedServer, (long long param_1))
 
 
 #ifdef PRINT_CLIENT_MSG
-
 /*
 void __thiscall
 APlayerController::ClientMessage
@@ -585,7 +584,7 @@ void handleRCON() {
 	sockaddr_in addr;
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr);
+	inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
 
 	bind(listenSock, (sockaddr*)&addr, sizeof(addr));
 	listen(listenSock, SOMAXCONN);
@@ -696,7 +695,6 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, CanUseCharacter);
 	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 	HOOK_ATTACH(module_base, InternalGetNetMode);
-
 #ifdef PRINT_CLIENT_MSG
 	HOOK_ATTACH(module_base, ClientMessage);
 #endif 
