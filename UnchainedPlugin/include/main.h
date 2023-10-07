@@ -20,26 +20,41 @@ _________  .__     .__                .__                    ________
 // Helper functions
 
 void log(const char* str) {
-#ifndef _DEBUG
-	return;
-#endif
-	std::cout << str << std::endl;
-
+	if (GetConsoleWindow()) {
+		std::cout << str << std::endl;
+	}
 }
 
+std::string wstrtos(std::wstring in) {
+	//https://stackoverflow.com/a/12097772
+	//don't care about encoding/character truncation
+	std::string str;
+	std::transform(in.begin(), in.end(), std::back_inserter(str), [](wchar_t c) {
+		return (char)c;
+		});
 
-int logWideString(wchar_t* str) {
-#ifndef _DEBUG
+	return str;
+}
+
+std::wstring stowstr(std::string in) {
+	//https://stackoverflow.com/a/12097772
+	//don't care about encoding/character truncation
+	std::wstring str;
+	std::transform(in.begin(), in.end(), std::back_inserter(str), [](char c) {
+		return (wchar_t)c;
+		});
+
+	return str;
+}
+
+//TODO: fix this signature
+int logWideString(wchar_t* loggedString) {
+	if (!GetConsoleWindow()) {
+		return 0;
+	}	
+	
+	std::cout << wstrtos(loggedString) << std::endl;
 	return 0;
-#endif
-	int i = 0;
-	while (*(wchar_t*)str != 0) {
-		std::wcout << *(wchar_t*)str;
-		str++;
-		i++;
-	}
-	std::wcout << std::endl;
-	return i;
 }
 
 

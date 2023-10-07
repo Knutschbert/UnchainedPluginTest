@@ -16,7 +16,6 @@
 
 //always open output window
 #define _DEBUG
-
 #include "include/main.h"
 #include "include/Chivalry2.h"
 #include "include/UE4.h"
@@ -332,10 +331,17 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	else {
 		cached_this = this_ptr;
 	}
+#ifdef _DEBUG
+	log("[RCON][DEBUG]: PlayerController Exec called with:");
+	logWideString(str.str);
+#endif
 	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
+#ifdef _DEBUG
+		log("[RCON][DEBUG]: Intercept command detected");
+#endif
 		queueLock.lock();
 		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
 			//check if the intercept command is large enough to contain the substitute command
@@ -356,8 +362,9 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 			//copy the substitute command over top of the intercepted command
 			wcscpy_s(str.str, lstrlenW(str.str) + 1, command->c_str());
 
-			log("[RCON]: command substituted:");
-			logWideString(str.str);
+			log((std::string("[RCON]: executing command: ") + wstrtos(std::wstring(str.str))).c_str());
+			//log("[RCON]: command substituted:");
+			//logWideString(str.str);
 			return o_ConsoleCommand(this_ptr, str, b);
 		}
 		queueLock.unlock();
@@ -593,11 +600,15 @@ void handleRCON() {
 	while (true) {
 		//set up a new command string
 		auto command = std::make_unique<std::wstring>();
+#ifdef _VERBOSE
 		log("[RCON]: Waiting for command");
+#endif
 		//get a command from a socket
 		int addrLen = sizeof(addr);
 		SOCKET remote = accept(listenSock, (sockaddr*)&addr, &addrLen);
+#ifdef _VERBOSE
 		log("[RCON]: Accepted connection");
+#endif
 		if (remote == INVALID_SOCKET) {
 			log("[RCON][FATAL]: invalid socket error");
 			return;
@@ -626,8 +637,7 @@ void handleRCON() {
 
 		//add into command queue
 		queueLock.lock();
-		log("[RCON]: added command to queue: ");
-		logWideString(const_cast<wchar_t*>(command->c_str()));
+		log((std::string("[RCON]: received RCON command: ") + wstrtos(*command)).c_str());
 		commandQueue.emplace(std::move(command)); //put the command into the queue
 		queueLock.unlock();
 	}
