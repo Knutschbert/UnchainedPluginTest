@@ -42,6 +42,21 @@ int logWideString(wchar_t* str) {
 	return i;
 }
 
+int logWideString(const wchar_t* str) {
+#ifndef _DEBUG
+	return 0;
+#endif
+	int i = 0;
+	while (*(wchar_t*)str != 0) {
+		std::wcout << *(wchar_t*)str;
+		str++;
+		i++;
+	}
+	std::wcout << std::endl;
+	return i;
+}
+
+
 
 long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
 {
@@ -65,7 +80,6 @@ long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const c
 		return diff;
 
 }
-
 
 inline static void Ptch_Nop(unsigned char* address, int size)
 {

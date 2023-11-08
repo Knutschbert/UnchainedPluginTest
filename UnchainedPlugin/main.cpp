@@ -13,6 +13,7 @@
 #include <queue>
 #include <string>
 #include "tiny-json/tiny-json.h"
+#include <winhttp.h>
 
 //always open output window
 #define _DEBUG
@@ -35,6 +36,10 @@
 
 #define DEFAULT_SERVER_BROWSER_BACKEND L"http://servers.polehammer.net"
 #define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
+
+int logFString(FString str) {
+	return logWideString(str.str);
+}
 
 struct BuildType {
 	~BuildType() {
@@ -64,6 +69,27 @@ BuildType curBuild;
 bool jsonDone = false;
 bool offsetsLoaded = false;
 bool needsSerialization = true;
+
+#include <windows.h>
+
+// This macro assumes that 'utf8bytes' is a null-terminated string.
+#define UTF8_TO_TCHAR(utf8bytes) Utf8ToTChar(utf8bytes)
+
+// Helper function that uses Windows API to convert UTF-8 to wchar_t array (TCHAR)
+const wchar_t* Utf8ToTChar(const char* utf8bytes)
+{
+	// First, find out the required buffer size.
+	int bufferSize = MultiByteToWideChar(CP_UTF8, 0, utf8bytes, -1, nullptr, 0);
+
+	// Allocate buffer for WCHAR string.
+	wchar_t* wcharString = new wchar_t[bufferSize];
+
+	// Do the actual conversion.
+	MultiByteToWideChar(CP_UTF8, 0, utf8bytes, -1, wcharString, bufferSize);
+
+	return wcharString; // The caller is responsible for deleting this buffer after use.
+}
+
 
 uint32_t calculateCRC32(const std::string& filename) {
 	std::ifstream file(filename, std::ios::binary);
@@ -122,6 +148,143 @@ std::wstring GetApiUrl(const wchar_t* path) {
 		std::wstring baseUrl(DEFAULT_SERVER_BROWSER_BACKEND);
 		return baseUrl + path;
 	}
+}
+
+
+FString HTTPGet(const FString& host, const FString& path) {
+	BOOL bResults = FALSE;
+	HINTERNET hSession = NULL, hConnect = NULL, hRequest = NULL;
+	DWORD dwSize = 0;
+	DWORD dwDownloaded = 0;
+	LPSTR pszOutBuffer;
+	FString response = L"";
+
+	// Use WinHttpOpen to obtain a session handle.
+	hSession = WinHttpOpen(L"A WinHTTP Example Program/1.0",
+		WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+		WINHTTP_NO_PROXY_NAME,
+		WINHTTP_NO_PROXY_BYPASS, 0);
+
+	// Specify an HTTP server.
+	if (hSession)
+		hConnect = WinHttpConnect(hSession, host.str,
+			INTERNET_DEFAULT_HTTP_PORT, 0);
+
+	// Create an HTTP request handle.
+	if (hConnect)
+		hRequest = WinHttpOpenRequest(hConnect, L"GET", path.str,
+			NULL, WINHTTP_NO_REFERER,
+			WINHTTP_DEFAULT_ACCEPT_TYPES,
+			0);
+
+	// Send a request.
+	if (hRequest)
+		bResults = WinHttpSendRequest(hRequest,
+			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+			WINHTTP_NO_REQUEST_DATA, 0,
+			0, 0);
+
+	// End the request.
+	if (bResults)
+		bResults = WinHttpReceiveResponse(hRequest, NULL);
+
+	// Keep checking for data until there is nothing left.
+	if (bResults) {
+		do {
+			// Check for available data.
+			dwSize = 0;
+			if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) {
+				printf("Error %u in WinHttpQueryDataAvailable.\n",
+					GetLastError());
+				break;
+			}
+
+			// Allocate space for the buffer.
+			pszOutBuffer = new char[dwSize + 1];
+			if (!pszOutBuffer) {
+				printf("Out of memory\n");
+				dwSize = 0;
+				break;
+			}
+			else {
+				// Read the data.
+				ZeroMemory(pszOutBuffer, dwSize + 1);
+
+				if (!WinHttpReadData(hRequest, (LPVOID)pszOutBuffer,
+					dwSize, &dwDownloaded)) {
+					printf("Error %u in WinHttpReadData.\n", GetLastError());
+				}
+				else {
+					// Data has been read successfully.
+					response = UTF8_TO_TCHAR(pszOutBuffer);
+				}
+
+				// Free the memory allocated to the buffer.
+				delete[] pszOutBuffer;
+			}
+		} while (dwSize > 0);
+	}
+
+	// Close any open handles.
+	if (hRequest) WinHttpCloseHandle(hRequest);
+	if (hConnect) WinHttpCloseHandle(hConnect);
+	if (hSession) WinHttpCloseHandle(hSession);
+
+	return response;
+}
+
+std::wstring ExtractHost(const std::wstring& url) {
+	size_t protocol_end = url.find(L"://");
+	if (protocol_end != std::wstring::npos) {
+		size_t host_start = protocol_end + 3; // Skip past "://"
+		size_t host_end = url.find(L'/', host_start); // Find the end of the host part
+		if (host_end != std::wstring::npos) {
+			return url.substr(host_start, host_end - host_start);
+		}
+		else {
+			// If there's no trailing slash, the host runs until the end of the string
+			return url.substr(host_start);
+		}
+	}
+	return std::wstring(); // Return an empty string if the protocol part isn't found
+}
+
+
+// Distributed bans
+DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)) {
+	o_PreLogin(this_ptr, Options, Address, UniqueId, ErrorMessage);
+	
+	// An error is already present
+	if (ErrorMessage.letter_count != 0)
+		return;
+
+	if (CmdGetParam(L"--use-backend-banlist") == -1)
+		return;
+
+	log("Vanilla login passed. Checking ban status.");
+
+	// Create an HTTP request handle.
+	std::wstring host = ExtractHost(Address.str);
+	std::wstring apiPathBase = L"/api/v1/check-banned/";
+	std::wstring apiPath = apiPathBase + Address.str;
+	std::wstring messagePrefix = L"Checking banned status at ";
+	auto logMessage = (messagePrefix + host + apiPath);
+	logWideString(logMessage.c_str());
+
+	FString result = HTTPGet(host.c_str(), apiPath.c_str());
+	logFString(result);
+	bool banned = result.Contains(FString(L"true"));
+
+	if (banned) {
+		ErrorMessage = L"You are banned from this server.";
+	}
+
+	FString message = Address;
+
+	FString suffix = banned ?
+		L" is banned" : L" is not banned";
+
+	logFString(message.Concat(suffix));
 }
 
 // Browser plugin
@@ -695,6 +858,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, CanUseCharacter);
 	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 	HOOK_ATTACH(module_base, InternalGetNetMode);
+	HOOK_ATTACH(module_base, PreLogin);
 #ifdef PRINT_CLIENT_MSG
 	HOOK_ATTACH(module_base, ClientMessage);
 #endif 
