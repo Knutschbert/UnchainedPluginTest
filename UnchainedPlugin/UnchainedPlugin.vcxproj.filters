@@ -46,9 +46,6 @@
     <ClCompile Include="include\Chivalry2.h">
       <Filter>Source Headers</Filter>
     </ClCompile>
-    <ClCompile Include="include\http.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\main.h">

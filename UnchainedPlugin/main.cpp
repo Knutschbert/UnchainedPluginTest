@@ -70,8 +70,6 @@ bool jsonDone = false;
 bool offsetsLoaded = false;
 bool needsSerialization = true;
 
-#include <windows.h>
-
 // This macro assumes that 'utf8bytes' is a null-terminated string.
 #define UTF8_TO_TCHAR(utf8bytes) Utf8ToTChar(utf8bytes)
 
@@ -149,6 +147,17 @@ std::wstring GetApiUrl(const wchar_t* path) {
 		return baseUrl + path;
 	}
 }
+
+std::wstring GetApiBaseURL() {
+	if (CmdGetParam(SERVER_BROWSER_BACKEND_CLI_ARG) != -1) {
+		return CmdParseParam(SERVER_BROWSER_BACKEND_CLI_ARG, L"", L"");
+	}
+	else {
+		std::wstring baseUrl(DEFAULT_SERVER_BROWSER_BACKEND);
+		return baseUrl;
+	}
+}
+
 
 
 FString HTTPGet(const FString& host, const FString& path) {
@@ -264,7 +273,7 @@ DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const
 	log("Vanilla login passed. Checking ban status.");
 
 	// Create an HTTP request handle.
-	std::wstring host = ExtractHost(Address.str);
+	std::wstring host = ExtractHost(GetApiBaseURL());
 	std::wstring apiPathBase = L"/api/v1/check-banned/";
 	std::wstring apiPath = apiPathBase + Address.str;
 	std::wstring messagePrefix = L"Checking banned status at ";

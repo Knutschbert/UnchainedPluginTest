@@ -93,7 +93,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="include\http.c" />
     <ClCompile Include="Lib\MinHook\src\buffer.c" />
     <ClCompile Include="Lib\MinHook\src\hde\hde32.c" />
     <ClCompile Include="Lib\MinHook\src\hde\hde64.c" />
