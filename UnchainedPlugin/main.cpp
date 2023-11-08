@@ -124,6 +124,8 @@ std::wstring GetApiUrl(const wchar_t* path) {
 	}
 }
 
+DECL_HOOK(void*, PreLogin, (ATBLGameMode* this_ptr, const FString* Options, const FString* Address, const FUni))
+
 // Browser plugin
 DECL_HOOK(void*, GetMotd, (GCGObj* this_ptr, void* a2, GetMotdRequest* request, void* a4)) {
 	log("GetMotd Called");
