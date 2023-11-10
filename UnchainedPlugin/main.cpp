@@ -148,18 +148,6 @@ std::wstring GetApiUrl(const wchar_t* path) {
 	}
 }
 
-std::wstring GetApiBaseURL() {
-	if (CmdGetParam(SERVER_BROWSER_BACKEND_CLI_ARG) != -1) {
-		return CmdParseParam(SERVER_BROWSER_BACKEND_CLI_ARG, L"", L"");
-	}
-	else {
-		std::wstring baseUrl(DEFAULT_SERVER_BROWSER_BACKEND);
-		return baseUrl;
-	}
-}
-
-
-
 std::wstring HTTPGet(const std::wstring* url) {
 	std::wstring response = L"";
 
