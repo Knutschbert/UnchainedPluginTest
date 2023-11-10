@@ -22,6 +22,8 @@ struct FOwnershipResponse {
 	int32_t level;
 };
 
+struct UTBLCharacterMovement {};
+
 struct ATBLPlayerController { };
 
 struct ATBLGameMode { };

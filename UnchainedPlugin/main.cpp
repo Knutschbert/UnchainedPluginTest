@@ -34,7 +34,7 @@
 #include <cstdint>
 #include <nmmintrin.h> // SSE4.2 intrinsics
 
-#define DEFAULT_SERVER_BROWSER_BACKEND L"http://servers.polehammer.net"
+#define DEFAULT_SERVER_BROWSER_BACKEND L"https://servers.polehammer.net"
 #define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
 
 int logFString(FString str) {
@@ -160,80 +160,167 @@ std::wstring GetApiBaseURL() {
 
 
 
-FString HTTPGet(const FString& host, const FString& path) {
+std::wstring HTTPGet(const std::wstring* url) {
+	std::wstring response = L"";
+
+	URL_COMPONENTSW lpUrlComponents = { 0 }; // Initialize the structure to zero.
+	lpUrlComponents.dwStructSize = sizeof(URL_COMPONENTSW);
+	lpUrlComponents.dwSchemeLength = (DWORD)-1;    // Let WinHttpCrackUrl allocate memory.
+	lpUrlComponents.dwHostNameLength = (DWORD)-1;  // Let WinHttpCrackUrl allocate memory.
+	lpUrlComponents.dwUrlPathLength = (DWORD)-1;   // Let WinHttpCrackUrl allocate memory.
+
+	// Allocate buffers for the URL components
+	wchar_t* schemeBuf = new wchar_t[url->length() + 1];
+	wchar_t* hostNameBuf = new wchar_t[url->length() + 1];
+	wchar_t* urlPathBuf = new wchar_t[url->length() + 1];
+
+	// Assign buffers to the structure
+	lpUrlComponents.lpszScheme = schemeBuf;
+	lpUrlComponents.lpszHostName = hostNameBuf;
+	lpUrlComponents.lpszUrlPath = urlPathBuf;
+
+	bool success = WinHttpCrackUrl(url->c_str(), url->length(), 0, &lpUrlComponents);
+
+	if(!success) {
+		log("Failed to crack URL");
+		DWORD error = GetLastError();
+
+		switch (error)
+		{
+			case ERROR_WINHTTP_INTERNAL_ERROR:
+				log("ERROR_WINHTTP_INTERNAL_ERROR");
+				break;
+			case ERROR_WINHTTP_INVALID_URL:
+				log("ERROR_WINHTTP_INVALID_URL");
+				break;
+			case ERROR_WINHTTP_UNRECOGNIZED_SCHEME:
+				log("ERROR_WINHTTP_UNRECOGNIZED_SCHEME");
+				break;
+			case ERROR_NOT_ENOUGH_MEMORY:
+				log("ERROR_NOT_ENOUGH_MEMORY");
+				break;
+			default:
+				break;
+		}
+		
+		return response;
+	}
+
+	std::wstring host = std::wstring(lpUrlComponents.lpszHostName, lpUrlComponents.dwHostNameLength);
+	std::wstring path = std::wstring(lpUrlComponents.lpszUrlPath, lpUrlComponents.dwUrlPathLength);
+	std::wstring scheme = std::wstring(lpUrlComponents.lpszScheme, lpUrlComponents.dwSchemeLength);
+	bool tls = scheme == L"https";
+	int port = lpUrlComponents.nPort;
+
 	BOOL bResults = FALSE;
 	HINTERNET hSession = NULL, hConnect = NULL, hRequest = NULL;
 	DWORD dwSize = 0;
 	DWORD dwDownloaded = 0;
 	LPSTR pszOutBuffer;
-	FString response = L"";
 
-	// Use WinHttpOpen to obtain a session handle.
-	hSession = WinHttpOpen(L"A WinHTTP Example Program/1.0",
-		WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-		WINHTTP_NO_PROXY_NAME,
-		WINHTTP_NO_PROXY_BYPASS, 0);
+	try {
+		// Use WinHttpOpen to obtain a session handle.
+		hSession = WinHttpOpen(L"Chivalry 2 Unchained/0.4",
+			WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+			WINHTTP_NO_PROXY_NAME,
+			WINHTTP_NO_PROXY_BYPASS, 0);
 
-	// Specify an HTTP server.
-	if (hSession)
-		hConnect = WinHttpConnect(hSession, host.str,
-			INTERNET_DEFAULT_HTTP_PORT, 0);
+		// Specify an HTTP server.
 
-	// Create an HTTP request handle.
-	if (hConnect)
-		hRequest = WinHttpOpenRequest(hConnect, L"GET", path.str,
-			NULL, WINHTTP_NO_REFERER,
-			WINHTTP_DEFAULT_ACCEPT_TYPES,
-			0);
+		if (hSession) {
+			hConnect = WinHttpConnect(hSession, host.c_str(), port, 0);
+		}
+		else {
+			log("Failed to open WinHttp session");
+		}
 
-	// Send a request.
-	if (hRequest)
-		bResults = WinHttpSendRequest(hRequest,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			0, 0);
+		// Create an HTTP request handle.
+		if (hConnect)
+			hRequest = WinHttpOpenRequest(hConnect, L"GET", path.c_str(),
+				NULL, WINHTTP_NO_REFERER,
+				WINHTTP_DEFAULT_ACCEPT_TYPES,
+				tls ? WINHTTP_FLAG_SECURE : 0);
+		else
+			log("Failed to connect to WinHttp target");
 
-	// End the request.
-	if (bResults)
-		bResults = WinHttpReceiveResponse(hRequest, NULL);
+		// Send a request.
+		if (hRequest)
+			bResults = WinHttpSendRequest(hRequest,
+				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+				WINHTTP_NO_REQUEST_DATA, 0,
+				0, 0);
+		else
+			log("Failed to open WinHttp request");
 
-	// Keep checking for data until there is nothing left.
-	if (bResults) {
-		do {
-			// Check for available data.
-			dwSize = 0;
-			if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) {
-				printf("Error %u in WinHttpQueryDataAvailable.\n",
-					GetLastError());
-				break;
-			}
+		// End the request.
+		if (bResults)
+			bResults = WinHttpReceiveResponse(hRequest, NULL);
+		else
+			log("Failed to send WinHttp request");
 
-			// Allocate space for the buffer.
-			pszOutBuffer = new char[dwSize + 1];
-			if (!pszOutBuffer) {
-				printf("Out of memory\n");
+		// Keep checking for data until there is nothing left.
+		if (bResults) {
+			do {
+				// Check for available data.
 				dwSize = 0;
-				break;
-			}
-			else {
-				// Read the data.
-				ZeroMemory(pszOutBuffer, dwSize + 1);
+				if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) {
+					printf("Error %u in WinHttpQueryDataAvailable.\n",
+						GetLastError());
+					break;
+				}
 
-				if (!WinHttpReadData(hRequest, (LPVOID)pszOutBuffer,
-					dwSize, &dwDownloaded)) {
-					printf("Error %u in WinHttpReadData.\n", GetLastError());
+				// Allocate space for the buffer.
+				pszOutBuffer = new char[dwSize + 1];
+				if (!pszOutBuffer) {
+					printf("Out of memory\n");
+					dwSize = 0;
+					break;
 				}
 				else {
-					// Data has been read successfully.
-					response = UTF8_TO_TCHAR(pszOutBuffer);
+					// Read the data.
+					ZeroMemory(pszOutBuffer, dwSize + 1);
+
+					if (!WinHttpReadData(hRequest, (LPVOID)pszOutBuffer,
+						dwSize, &dwDownloaded)) {
+						printf("Error %u in WinHttpReadData.\n", GetLastError());
+					}
+					else {
+						// Data has been read successfully.
+						std::wstring chunk = UTF8_TO_TCHAR(pszOutBuffer);
+						response.append(chunk);
+					}
+
+					// Free the memory allocated to the buffer.
+					delete[] pszOutBuffer;
 				}
+			} while (dwSize > 0);
+		}
+		else
+			log("Failed to receive WinHttp response");
 
-				// Free the memory allocated to the buffer.
-				delete[] pszOutBuffer;
-			}
-		} while (dwSize > 0);
+		if (!hRequest || !hConnect || !hSession) {
+			log("Failed to open WinHttp handles");
+			std::wstring message =
+				L"Host: " + host + L"\n" +
+				L"Port: " + std::to_wstring(port) + L"\n" +
+				L"Path: " + path + L"\n" +
+				L"TLS: " + std::to_wstring(tls);
+			logWideString(message.c_str());
+		}
 	}
-
+	catch (...) {
+		log("Exception in HTTPGet");
+		delete[] schemeBuf;
+		delete[] hostNameBuf;
+		delete[] urlPathBuf;
+		if (hRequest) WinHttpCloseHandle(hRequest);
+		if (hConnect) WinHttpCloseHandle(hConnect);
+		if (hSession) WinHttpCloseHandle(hSession);
+		throw;
+	}
+	delete[] schemeBuf;
+	delete[] hostNameBuf;
+	delete[] urlPathBuf;
 	// Close any open handles.
 	if (hRequest) WinHttpCloseHandle(hRequest);
 	if (hConnect) WinHttpCloseHandle(hConnect);
@@ -241,26 +328,15 @@ FString HTTPGet(const FString& host, const FString& path) {
 
 	return response;
 }
-
-std::wstring ExtractHost(const std::wstring& url) {
-	size_t protocol_end = url.find(L"://");
-	if (protocol_end != std::wstring::npos) {
-		size_t host_start = protocol_end + 3; // Skip past "://"
-		size_t host_end = url.find(L'/', host_start); // Find the end of the host part
-		if (host_end != std::wstring::npos) {
-			return url.substr(host_start, host_end - host_start);
-		}
-		else {
-			// If there's no trailing slash, the host runs until the end of the string
-			return url.substr(host_start);
-		}
-	}
-	return std::wstring(); // Return an empty string if the protocol part isn't found
+DECL_HOOK(void, FString_AppendChars, (FString* this_ptr, const wchar_t* Str, int Count)) {
+	o_FString_AppendChars(this_ptr, Str, Count);
 }
-
 
 // Distributed bans
 DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)) {
+	std::wstring addressString = Address.str;
+	logWideString((addressString + L" is attempting to connect.").c_str());
+
 	o_PreLogin(this_ptr, Options, Address, UniqueId, ErrorMessage);
 	
 	// An error is already present
@@ -270,30 +346,30 @@ DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const
 	if (CmdGetParam(L"--use-backend-banlist") == -1)
 		return;
 
-	log("Vanilla login passed. Checking ban status.");
+	log("Checking Unchained ban status.");
 
-	// Create an HTTP request handle.
-	std::wstring host = ExtractHost(GetApiBaseURL());
-	std::wstring apiPathBase = L"/api/v1/check-banned/";
-	std::wstring apiPath = apiPathBase + Address.str;
-	std::wstring messagePrefix = L"Checking banned status at ";
-	auto logMessage = (messagePrefix + host + apiPath);
-	logWideString(logMessage.c_str());
+	std::wstring path = L"/api/v1/check-banned/";
+	path.append(addressString);
+	std::wstring apiUrl = GetApiUrl(path.c_str());
+	std::wstring result = HTTPGet(&apiUrl);
 
-	FString result = HTTPGet(host.c_str(), apiPath.c_str());
-	logFString(result);
-	bool banned = result.Contains(FString(L"true"));
-
-	if (banned) {
-		ErrorMessage = L"You are banned from this server.";
+	if (result.empty()) {
+		log("Failed to get ban status");
+		return;
 	}
 
-	FString message = Address;
+	bool banned = result.find(L"true") != std::wstring::npos;
 
-	FString suffix = banned ?
+	if (banned) {
+		std::wstring message = L"You are banned from this server.";
+		hk_FString_AppendChars(&ErrorMessage, message.c_str(), message.length());
+	}
+
+
+	std::wstring suffix = banned ?
 		L" is banned" : L" is not banned";
 
-	logFString(message.Concat(suffix));
+	logWideString((addressString + suffix).c_str());
 }
 
 // Browser plugin
@@ -868,6 +944,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 	HOOK_ATTACH(module_base, InternalGetNetMode);
 	HOOK_ATTACH(module_base, PreLogin);
+	HOOK_ATTACH(module_base, FString_AppendChars);
 #ifdef PRINT_CLIENT_MSG
 	HOOK_ATTACH(module_base, ClientMessage);
 #endif 
