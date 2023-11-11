@@ -409,6 +409,14 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	}
 }
 
+
+DECL_HOOK(FOwnershipResponse*, GetOwnershipFromPlayerControllerAndState, (FOwnershipResponse * result, void* PlayerController, void* PlayerState, void* AssetIdToCheck, bool BaseOnly)) {
+	FOwnershipResponse* response = o_GetOwnershipFromPlayerControllerAndState(result, PlayerController, PlayerState, AssetIdToCheck, BaseOnly);
+	response->owned = true;
+	response->level = 0;
+	return response;
+}
+
 DECL_HOOK(FOwnershipResponse*, CanUseLoadoutItem, (ATBLPlayerController* _this, FOwnershipResponse* result, const void* InLoadOutSelection, const void* InItem)) {
 	auto response = o_CanUseLoadoutItem(_this, result, InLoadOutSelection, InItem); response->owned = true;
 	response->level = 0;
@@ -933,6 +941,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, InternalGetNetMode);
 	HOOK_ATTACH(module_base, PreLogin);
 	HOOK_ATTACH(module_base, FString_AppendChars);
+	HOOK_ATTACH(module_base, GetOwnershipFromPlayerControllerAndState);
 #ifdef PRINT_CLIENT_MSG
 	HOOK_ATTACH(module_base, ClientMessage);
 #endif 
