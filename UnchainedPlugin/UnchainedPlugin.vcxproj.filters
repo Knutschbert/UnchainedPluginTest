@@ -84,5 +84,11 @@
     <ClInclude Include="Lib\MinHook\src\trampoline.h">
       <Filter>Lib Headers</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
 </Project>
