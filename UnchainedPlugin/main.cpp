@@ -321,7 +321,6 @@ DECL_HOOK(void, FString_AppendChars, (FString* this_ptr, const wchar_t* Str, int
 }
 
 // Distributed bans
-static bool UseBackendBanList = CmdGetParam(L"--use-backend-banlist") != -1;
 DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)) {
 	std::wstring addressString = Address.str;
 	logWideString((addressString + L" is attempting to connect.").c_str());
@@ -330,9 +329,6 @@ DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const
 	
 	// An error is already present
 	if (ErrorMessage.letter_count != 0)
-		return;
-
-	if (!UseBackendBanList)
 		return;
 
 	log("Checking Unchained ban status.");
@@ -410,13 +406,8 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	}
 }
 
-static bool IsHeadless = CmdGetParam(L"-nullrhi") != -1;
 DECL_HOOK(FOwnershipResponse*, GetOwnershipFromPlayerControllerAndState, (FOwnershipResponse * result, void* PlayerController, void* PlayerState, void* AssetIdToCheck, bool BaseOnly)) {
 	FOwnershipResponse* response = o_GetOwnershipFromPlayerControllerAndState(result, PlayerController, PlayerState, AssetIdToCheck, BaseOnly);
-
-	if(!IsHeadless)
-		return response;
-
 	response->owned = true;
 	response->level = 0;
 	return response;
@@ -944,9 +935,19 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, CanUseCharacter);
 	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 	HOOK_ATTACH(module_base, InternalGetNetMode);
-	HOOK_ATTACH(module_base, PreLogin);
-	HOOK_ATTACH(module_base, FString_AppendChars);
-	HOOK_ATTACH(module_base, GetOwnershipFromPlayerControllerAndState);
+
+	bool useBackendBanList = CmdGetParam(L"--use-backend-banlist") != -1;
+	if (useBackendBanList) {
+		HOOK_ATTACH(module_base, FString_AppendChars);
+		HOOK_ATTACH(module_base, PreLogin);
+
+	}
+
+	bool IsHeadless = CmdGetParam(L"-nullrhi") != -1;
+	if (IsHeadless) {
+		HOOK_ATTACH(module_base, GetOwnershipFromPlayerControllerAndState);
+	}
+
 #ifdef PRINT_CLIENT_MSG
 	HOOK_ATTACH(module_base, ClientMessage);
 #endif 
