@@ -89,7 +89,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winhttp.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -116,6 +117,10 @@
     <ClInclude Include="Lib\MinHook\src\hde\table64.h" />
     <ClInclude Include="Lib\MinHook\src\trampoline.h" />
     <ClInclude Include="Lib\tiny-json\tiny-json.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,18 +1,6 @@
 #pragma once
 
-#include <cstdint>
 #include "UE4.h"
-
-//FViewport* __thiscall FViewport::FViewport(FViewport* this, FViewportClient* param_1)
-struct FViewport_C
-{
-	uint8_t ph[0x20];
-	FString AppVersionString;
-};
-
-struct GCGObj {
-	FString url_base;
-};
 
 struct GetMotdRequest {
 	uint8_t ph[0xD8];
@@ -33,6 +21,12 @@ struct FOwnershipResponse {
 	uint8_t levelType;
 	int32_t level;
 };
+
+struct UTBLCharacterMovement {};
+
+struct ATBLPlayerController { };
+
+struct ATBLGameMode { };
 
 enum EOnlineStat
 {
@@ -129,4 +123,4 @@ enum EOnlineStat
 	OS_FLAVOR_MAX = 90,
 };
 
-struct ATBLPlayerController { };
+
