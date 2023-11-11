@@ -20,6 +20,7 @@
 	etype(UGameplay__IsDedicatedServer) \
 	etype(InternalGetNetMode) \
 	etype(ClientMessage) \
+	etype(GetOwnershipFromPlayerControllerAndState) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -104,6 +105,8 @@ static const char* signatures[F_MaxFuncType + 1] =
 	"40 53 48 81 EC 90 00 00 00 48 8B D9 48 8B 49 38 48 85 C9 ? ? 48 81 C4 90 00 00 00 5B ? ? ? ? ? 48 8B 8B F0 00 00 00 48",
 	/*ClientMessage*/
 	"4C 8B DC 48 83 EC 58 33 C0 49 89 5B 08 49 89 73 18 49 8B D8 49 89 43 C8 48 8B F1 49 89 43 D0 49 89 43 D8 49 8D 43",
+	/*ATBLPlayerController::GetOwnershipFromPlayerControllerAndState*/
+	"40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 B0 FD",
 	/*MaxFuncType*/
 	""
 };
