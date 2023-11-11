@@ -321,6 +321,7 @@ DECL_HOOK(void, FString_AppendChars, (FString* this_ptr, const wchar_t* Str, int
 }
 
 // Distributed bans
+static bool UseBackendBanList = CmdGetParam(L"--use-backend-banlist") != -1;
 DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)) {
 	std::wstring addressString = Address.str;
 	logWideString((addressString + L" is attempting to connect.").c_str());
@@ -331,7 +332,7 @@ DECL_HOOK(void, PreLogin, (ATBLGameMode* this_ptr, const FString& Options, const
 	if (ErrorMessage.letter_count != 0)
 		return;
 
-	if (CmdGetParam(L"--use-backend-banlist") == -1)
+	if (!UseBackendBanList)
 		return;
 
 	log("Checking Unchained ban status.");
@@ -409,9 +410,13 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	}
 }
 
-
+static bool IsHeadless = CmdGetParam(L"-nullrhi") != -1;
 DECL_HOOK(FOwnershipResponse*, GetOwnershipFromPlayerControllerAndState, (FOwnershipResponse * result, void* PlayerController, void* PlayerState, void* AssetIdToCheck, bool BaseOnly)) {
 	FOwnershipResponse* response = o_GetOwnershipFromPlayerControllerAndState(result, PlayerController, PlayerState, AssetIdToCheck, BaseOnly);
+
+	if(!IsHeadless)
+		return response;
+
 	response->owned = true;
 	response->level = 0;
 	return response;
