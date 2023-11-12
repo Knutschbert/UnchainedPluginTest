@@ -666,6 +666,14 @@ DECL_HOOK(uint8_t, InternalGetNetMode, (void* world))
 	return o_InternalGetNetMode(world);
 }
 
+bool playableListen = CmdGetParam(L"--playable-listen") != -1;
+DECL_HOOK(bool, UGameplay__IsDedicatedServer, (long long param_1))
+{
+	if (UWORLD != nullptr && !playableListen) {
+		return o_InternalGetNetMode(UWORLD) == 2;
+	} else return o_UGameplay__IsDedicatedServer(param_1);
+}
+
 #ifdef PRINT_CLIENT_MSG
 /*
 void __thiscall
@@ -931,7 +939,6 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
 	HOOK_ATTACH(module_base, CanUseLoadoutItem);
 	HOOK_ATTACH(module_base, CanUseCharacter);
-	// HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 
 	bool useBackendBanList = CmdGetParam(L"--use-backend-banlist") != -1;
 	if (useBackendBanList) {
@@ -942,6 +949,7 @@ unsigned long main_thread(void* lpParameter) {
 	bool IsServer = CmdGetParam(L"GameServerQueryPort=") != -1;
 	if (IsServer) {
 		HOOK_ATTACH(module_base, USkeletalMeshComponent_ShouldTickPose);
+		HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 		HOOK_ATTACH(module_base, InternalGetNetMode);
 	}
 
