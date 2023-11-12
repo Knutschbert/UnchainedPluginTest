@@ -63,11 +63,34 @@ int logWideString(const wchar_t* str) {
 long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
 {
 	const void* found = nullptr;
-	found = Sig::find(baseAddr, size, signature);
-	long long diff = 0;
-	if (found != nullptr)
+	const void* firstResult = nullptr;
+	void* addr = baseAddr;
+	int count = 0;
+
+	// search for all occurances with Sig::find
+	while ((found = Sig::find(addr, size, signature)) != nullptr)
 	{
-		diff = (long long)found - (long long)baseAddr;
+		if (firstResult == nullptr)
+			firstResult = found;
+
+		addr = (void*)((long long)found + 1);
+		count++;
+	}
+
+
+	if (count == 0) {
+		printf("ERROR -> %s : nullptr\n", title);
+		return 0;
+	}
+
+	if (count > 1) {
+		printf("WARN -> Duplicate %s found %d occurances\n", title, count);
+	}
+
+	long long diff = 0;
+	if (firstResult != nullptr)
+	{
+		diff = (long long)firstResult - (long long)baseAddr;
 #ifdef _DEBUG
 		//std::cout << title << ": 0x" << std::hex << diff << std::endl;
 		printf("?? -> %s : 0x%llx\n", title, diff);

@@ -633,7 +633,6 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 
 DECL_HOOK(bool, USkeletalMeshComponent_ShouldTickPose, (USkeletalMeshComponent* this_ptr)) {
 	this_ptr->bOnlyAllowAutonomousTickPose = true;
-
 	return o_USkeletalMeshComponent_ShouldTickPose(this_ptr);
 }
 
@@ -666,16 +665,6 @@ DECL_HOOK(uint8_t, InternalGetNetMode, (void* world))
 	UWORLD = world;
 	return o_InternalGetNetMode(world);
 }
-
-bool playableListen = CmdGetParam(L"--playable-listen") != -1;
-DECL_HOOK(bool, UGameplay__IsDedicatedServer, (long long param_1))
-{
-	if (UWORLD != nullptr && !playableListen) {
-		return o_InternalGetNetMode(UWORLD) == 2;
-	}
-	else return o_UGameplay__IsDedicatedServer(param_1);
-}
-
 
 #ifdef PRINT_CLIENT_MSG
 /*
@@ -891,6 +880,7 @@ unsigned long main_thread(void* lpParameter) {
 
 	MH_Initialize();
 
+
 	// https://github.com/HoShiMin/Sig
 	const void* found = nullptr;
 	LoadBuildConfig();
@@ -914,6 +904,7 @@ unsigned long main_thread(void* lpParameter) {
 	{
 		if (curBuild.offsets[i] == 0)
 			curBuild.offsets[i] = FindSignature(baseAddr, moduleInfo.SizeOfImage, strFunc[i], signatures[i]);
+
 		else printf("ok -> %s : (conf)\n", strFunc[i]);
 		if (i == F_FViewport)
 		{
@@ -940,8 +931,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, LoadFrontEndMap);
 	HOOK_ATTACH(module_base, CanUseLoadoutItem);
 	HOOK_ATTACH(module_base, CanUseCharacter);
-	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
-	HOOK_ATTACH(module_base, InternalGetNetMode);
+	// HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 
 	bool useBackendBanList = CmdGetParam(L"--use-backend-banlist") != -1;
 	if (useBackendBanList) {
@@ -952,6 +942,7 @@ unsigned long main_thread(void* lpParameter) {
 	bool IsServer = CmdGetParam(L"GameServerQueryPort=") != -1;
 	if (IsServer) {
 		HOOK_ATTACH(module_base, USkeletalMeshComponent_ShouldTickPose);
+		HOOK_ATTACH(module_base, InternalGetNetMode);
 	}
 
 	bool IsHeadless = CmdGetParam(L"-nullrhi") != -1;
