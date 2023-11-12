@@ -17,6 +17,11 @@ struct FString {
 	int max_letters;
 };
 
+struct USkeletalMeshComponent {
+	uint8_t ph[0x804];
+	bool bOnlyAllowAutonomousTickPose;
+};
+
 //FViewport* __thiscall FViewport::FViewport(FViewport* this, FViewportClient* param_1)
 struct FViewport_C
 {

@@ -630,6 +630,13 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 	}
 }
 
+
+DECL_HOOK(bool, USkeletalMeshComponent_ShouldTickPose, (USkeletalMeshComponent* this_ptr)) {
+	this_ptr->bOnlyAllowAutonomousTickPose = true;
+
+	return o_USkeletalMeshComponent_ShouldTickPose(this_ptr);
+}
+
 //#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
 DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 {
@@ -940,7 +947,11 @@ unsigned long main_thread(void* lpParameter) {
 	if (useBackendBanList) {
 		HOOK_ATTACH(module_base, FString_AppendChars);
 		HOOK_ATTACH(module_base, PreLogin);
+	}
 
+	bool IsServer = CmdGetParam(L"GameServerQueryPort=") != -1;
+	if (IsServer) {
+		HOOK_ATTACH(module_base, USkeletalMeshComponent_ShouldTickPose);
 	}
 
 	bool IsHeadless = CmdGetParam(L"-nullrhi") != -1;
