@@ -633,6 +633,7 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 
 DECL_HOOK(bool, USkeletalMeshComponent_ShouldTickPose, (USkeletalMeshComponent* this_ptr)) {
 	this_ptr->bOnlyAllowAutonomousTickPose = true;
+
 	return o_USkeletalMeshComponent_ShouldTickPose(this_ptr);
 }
 
@@ -888,7 +889,6 @@ unsigned long main_thread(void* lpParameter) {
 
 	MH_Initialize();
 
-
 	// https://github.com/HoShiMin/Sig
 	const void* found = nullptr;
 	LoadBuildConfig();
@@ -912,7 +912,6 @@ unsigned long main_thread(void* lpParameter) {
 	{
 		if (curBuild.offsets[i] == 0)
 			curBuild.offsets[i] = FindSignature(baseAddr, moduleInfo.SizeOfImage, strFunc[i], signatures[i]);
-
 		else printf("ok -> %s : (conf)\n", strFunc[i]);
 		if (i == F_FViewport)
 		{
