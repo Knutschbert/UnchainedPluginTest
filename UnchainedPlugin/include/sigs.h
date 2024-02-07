@@ -23,7 +23,8 @@
 	etype(PreLogin) \
 	etype(FString_AppendChars) \
 	etype(GetOwnershipFromPlayerControllerAndState) \
-	etype(USkeletalMeshComponent_ShouldTickPose) \
+	etype(ATBLPlayerController_HandleGlobalGameNotification) \
+	etype(FString_PrintfImpl) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -114,8 +115,10 @@ static const char* signatures[F_MaxFuncType + 1] =
 	"45 85 C0 0F 84 89 00 00 00 48 89 5C 24 18 48 89 6C 24 20 56 48 83 EC 20 48 89 7C 24 30 48 8B EA 48 63 79 08 48 8B D9 4C 89 74 24 38 45 33 F6 85 FF 49 63 F0 41 8B C6 0F 94 C0 03 C7 03 C6 89 41 08 3B 41 0C 7E 07 8B D7 E8 ?? ?? ?? ?? 85 FF 49 8B C6 48 8B CF 48 8B D5 0F 95 C0 48 2B C8 48 8B 03 48 8D 1C 36 4C 8B C3 48 8D 3C 48 48 8B CF E8 ?? ?? ?? ?? 48 8B 6C 24 48 66 44 89 34 3B 4C 8B 74 24 38 48 8B 7C 24 30 48 8B 5C 24 40 48 83 C4 20 5E C3",
 	/*ATBLPlayerController::GetOwnershipFromPlayerControllerAndState*/
 	"40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 B0 FD",
-	/*USkeletalMeshComponent_ShouldTickPose*/
-	"48 89 5C 24 08 57 48 83 EC 20 0F B6 81 02 08 00 00 48 8B D9 A8 20 75 18 A8 10 75 0F 8B 81 48 09 00 00 48 39 05 ?? ?? ?? ?? 75 05 40 32 FF EB 03 40 B7 01 80 B9 0C 06 00 00 03 72 16 F6 81 0F 06 00 00 20 75 0D 48 8B 01 FF 90 ?? ?? ?? ?? 84 C0 74 61 40 84 FF 74 5C F6 83 E0 00 00 00 01 74 53 48 83 BB D8 06 00 00 00 75 0A 48 83 BB E0 06 00 00 00 74 3F F6 83 02 08 00 00 01 75 36 48 8B 83 00 01 00 00 48 85 C0 75 08 48 8B CB E8 ?? ?? ?? ?? 48 8B C8 E8 ?? ?? ?? ?? 84 C0 74 16 80 BB 01 08 00 00 00 7C 0D B0 01 48 8B 5C 24 30 48 83 C4 20 5F C3 48 8B 5C 24 30 32 C0 48 83 C4 20 5F C3",
+	/*ATBLPlayerController::HandleGlobalGameNotification*/
+	"48 89 5C 24 08 57 48 83 EC 20 48 8B 01 8B DA 48 8B F9 FF 90 ?? ?? ?? ?? 48 8B 8F",
+	/*FString::PrintfImpl*/
+	"4C 8B DC 49 89 53 10 4D 89 43 18 4D 89 4B 20 53 55 56 57 41 54 41 56 41 57 48 81 EC 50 04 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 40 04 00 00 48 8B DA 48 8D 74 24 40 4C",
 	/*MaxFuncType*/
 	""
 };

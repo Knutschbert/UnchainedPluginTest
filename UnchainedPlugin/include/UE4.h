@@ -17,6 +17,14 @@ struct FString {
 	int max_letters;
 };
 
+struct TextData {
+
+};
+
+struct FText {
+
+};
+
 struct USkeletalMeshComponent {
 	uint8_t ph[0x804];
 	bool bOnlyAllowAutonomousTickPose;

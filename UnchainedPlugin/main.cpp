@@ -631,12 +631,6 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 }
 
 
-DECL_HOOK(bool, USkeletalMeshComponent_ShouldTickPose, (USkeletalMeshComponent* this_ptr)) {
-	this_ptr->bOnlyAllowAutonomousTickPose = true;
-
-	return o_USkeletalMeshComponent_ShouldTickPose(this_ptr);
-}
-
 //#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
 DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 {
@@ -673,6 +667,20 @@ DECL_HOOK(bool, UGameplay__IsDedicatedServer, (long long param_1))
 	if (UWORLD != nullptr && !playableListen) {
 		return o_InternalGetNetMode(UWORLD) == 2;
 	} else return o_UGameplay__IsDedicatedServer(param_1);
+}
+
+
+DECL_HOOK(void, ATBLPlayerController_HandleGlobalGameNotification, (ATBLPlayerController* this_ptr, void* Category, void* Title, void* Body, void* Subcategory, void* Data)) {
+	//std::string message = "SetNetSpeed: " + std::to_string(NewSpeed);
+	//log(message.c_str());
+
+	o_ATBLPlayerController_HandleGlobalGameNotification(this_ptr, Category, Title, Body, Subcategory, Data);
+}
+
+DECL_HOOK(FString*, FString_PrintfImpl, (FString* this_ptr, const wchar_t* fmt, void* Args)) {
+	FString* result = o_FString_PrintfImpl(this_ptr, fmt, Args);
+	logWideString(result->str);
+	return this_ptr;
 }
 
 #ifdef PRINT_CLIENT_MSG
@@ -947,7 +955,6 @@ unsigned long main_thread(void* lpParameter) {
 
 	bool IsServer = CmdGetParam(L"GameServerQueryPort=") != -1;
 	if (IsServer) {
-		HOOK_ATTACH(module_base, USkeletalMeshComponent_ShouldTickPose);
 		HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 		HOOK_ATTACH(module_base, InternalGetNetMode);
 	}
