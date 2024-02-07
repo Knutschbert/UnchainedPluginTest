@@ -660,6 +660,23 @@ DECL_HOOK(uint8_t, InternalGetNetMode, (void* world))
 	return o_InternalGetNetMode(world);
 }
 
+static const char* ENetMode[] = {
+	"Standalone",
+	"DedicatedServer",
+	"ListenServer",
+	"Client",
+	"Max"
+};
+
+// ENetMode __thiscall UNetDriver::GetNetMode(UNetDriver* this)
+bool desync = CmdGetParam(L"--desync-skip") != -1;
+DECL_HOOK(uint8_t, UNetDriver__GetNetMode, (void* this_ptr)) {
+	uint8_t mode = o_UNetDriver__GetNetMode(this_ptr);
+	if (!desync && mode == 2)
+		return 1; // DedicatedServer
+	return mode;
+}
+
 bool playableListen = CmdGetParam(L"--playable-listen") != -1;
 DECL_HOOK(bool, UGameplay__IsDedicatedServer, (long long param_1))
 {
