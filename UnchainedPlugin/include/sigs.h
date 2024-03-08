@@ -24,6 +24,8 @@
 	etype(FString_AppendChars) \
 	etype(GetOwnershipFromPlayerControllerAndState) \
 	etype(UNetDriver__GetNetMode) \
+	etype(PreRegisterGamePost) \
+	etype(RegisterGamePost) \
 	etype(MaxFuncType) //this always needs to be last
 
 #define etype(x) uint32_t x = 0x0;
@@ -116,6 +118,12 @@ static const char* signatures[F_MaxFuncType + 1] =
 	"40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 B0 FD",
 	/*UNetDriver::GetNetMode*/
 	"48 83 EC 28 48 8B 01 ?? ?? ?? ?? ?? ?? 84 C0 ?? ?? 33 C0 38 ?? ?? ?? ?? 02 0F 95 C0 FF C0 48 83 C4",
+	/*PreRegisterGamePost*/
+	"E8 ?? ?? ?? ?? 48 8B 5C 24 70 4C 8B BC 24 B0 01 00",
+	/*RegisterGamePost*/
+	"E8 ? ? ? ? ? ? ? ? 48 8B 5D C8 4C 8B A4 24 68 01 00 00"
 	/*MaxFuncType*/
 	""
 };
+
+

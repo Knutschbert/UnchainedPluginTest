@@ -406,6 +406,54 @@ DECL_HOOK(void*, GetCurrentGames, (GCGObj* this_ptr, void* a2, GetCurrentGamesRe
 	}
 }
 
+DECL_HOOK(void*, PreRegisterGamePost, (GCGObj* this_ptr, void* a2, GetCurrentGamesRequest* request, void* a4)) {
+	log("PreRegisterGame called");
+
+	auto old_base = this_ptr->url_base;
+
+	auto originalToken = request->token;
+	auto emptyToken = FString(L"");
+
+	try {
+		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
+		request->token = emptyToken;
+		void* res = o_GetCurrentGames(this_ptr, a2, request, a4);
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		log("PreRegisterGame returned");
+		return res;
+	}
+	catch (...) {
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		throw;
+	}
+}
+
+DECL_HOOK(void*, RegisterGamePost, (GCGObj* this_ptr, void* a2, GetCurrentGamesRequest* request, void* a4)) {
+	log("RegisterGame called");
+
+	auto old_base = this_ptr->url_base;
+
+	auto originalToken = request->token;
+	auto emptyToken = FString(L"");
+
+	try {
+		this_ptr->url_base = FString(GetApiUrl(L"/api/tbio").c_str());
+		request->token = emptyToken;
+		void* res = o_GetCurrentGames(this_ptr, a2, request, a4);
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		log("RegisterGame returned");
+		return res;
+	}
+	catch (...) {
+		this_ptr->url_base = old_base;
+		request->token = originalToken;
+		throw;
+	}
+}
+
 DECL_HOOK(FOwnershipResponse*, GetOwnershipFromPlayerControllerAndState, (FOwnershipResponse * result, void* PlayerController, void* PlayerState, void* AssetIdToCheck, bool BaseOnly)) {
 	FOwnershipResponse* response = o_GetOwnershipFromPlayerControllerAndState(result, PlayerController, PlayerState, AssetIdToCheck, BaseOnly);
 	response->owned = true;
