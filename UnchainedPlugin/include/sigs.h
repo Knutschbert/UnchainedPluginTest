@@ -94,7 +94,7 @@ static const char* signatures[F_MaxFuncType + 1] =
 	"40 53 48 83 EC 20 48 8B 89 D0 02 00 00 48 8B DA 48 85 C9 74 0E E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 20 5B C3 33 C0 48 89 02 48 \
 	89 42 08 48 8B C3 48 83 C4 20 5B C3",
 	/*LoadFrontEndMap*/
-	"48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 48 8D 6C 24 D0 48 81 EC 30 01 00 00 4C 8B E2",
+	"E8 ?? ?? ?? ?? 4C 39 38 74 34",
 	/*ATBLPlayerController::CanUseLoadoutItem*/
 	"48 89 5C 24 08 48 89 74 24 10 55 57 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00",
 	/*ATBLPlayerController::CanUseCharacter*/
