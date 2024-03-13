@@ -5,4 +5,4 @@ The unchained plugin patches the Chivalry 2 Binary and allows connection to unof
 * DrLong
 * Nihilianth
 * Jacoby6000
-* Reciate (Zain)
+* Reciate
