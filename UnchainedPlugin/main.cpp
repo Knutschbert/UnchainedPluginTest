@@ -701,6 +701,16 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 		return o_LoadFrontEndMap(this_ptr, param_1);
 }
 
+// ENetMode __thiscall UNetDriver::GetNetMode(UNetDriver* this)
+/*
+static const wchar_t* ENetMode[] = {
+	L"Standalone",
+	L"DedicatedServer",
+	L"ListenServer",
+	L"Client",
+	L"Max"
+};
+*/
 void* UWORLD = nullptr;
 DECL_HOOK(uint8_t, InternalGetNetMode, (void* world))
 {
@@ -708,20 +718,18 @@ DECL_HOOK(uint8_t, InternalGetNetMode, (void* world))
 	return o_InternalGetNetMode(world);
 }
 
-static const char* ENetMode[] = {
-	"Standalone",
-	"DedicatedServer",
-	"ListenServer",
-	"Client",
-	"Max"
-};
-
-// ENetMode __thiscall UNetDriver::GetNetMode(UNetDriver* this)
+bool logged = false;
 bool desync = CmdGetParam(L"--desync-skip") != -1;
 DECL_HOOK(uint8_t, UNetDriver__GetNetMode, (void* this_ptr)) {
 	uint8_t mode = o_UNetDriver__GetNetMode(this_ptr);
-	if (!desync && mode == 2)
+
+	if (!desync && mode == 2) {
+		if (!logged) {
+			logWideString(L"Forcing DedicatedServer mode");
+			logged = true;
+		}
 		return 1; // DedicatedServer
+	}
 	return mode;
 }
 
@@ -1000,6 +1008,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, CanUseCharacter);
 	HOOK_ATTACH(module_base, UGameplay__IsDedicatedServer);
 	HOOK_ATTACH(module_base, InternalGetNetMode);
+	HOOK_ATTACH(module_base, UNetDriver__GetNetMode);
 
 	bool useBackendBanList = CmdGetParam(L"--use-backend-banlist") != -1;
 	if (useBackendBanList) {
