@@ -14,7 +14,7 @@
 #include <string>
 #include "tiny-json/tiny-json.h"
 #include <winhttp.h>
-
+#include <direct.h>
 //always open output window
 #define _DEBUG
 
@@ -33,6 +33,7 @@
 
 #include <cstdint>
 #include <nmmintrin.h> // SSE4.2 intrinsics
+#include <regex>
 
 #define DEFAULT_SERVER_BROWSER_BACKEND L"https://servers.polehammer.net"
 #define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
@@ -427,7 +428,6 @@ DECL_HOOK(FOwnershipResponse*, CanUseCharacter, (ATBLPlayerController* _this, FO
 	return response;
 }
 
-
 DECL_HOOK(void*, SendRequest, (GCGObj* this_ptr, FString* fullUrlInputPtr, FString* bodyContentPtr, FString* authKeyHeaderPtr, FString* authKeyValuePtr)) {
 	if (fullUrlInputPtr->letter_count > 0 &&
 		wcscmp(L"https://EBF8D.playfabapi.com/Client/Matchmake?sdk=Chiv2_Version", fullUrlInputPtr->str) == 0)
@@ -572,10 +572,17 @@ DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b))
 	else {
 		cached_this = this_ptr;
 	}
+#ifdef _DEBUG_
+	log("[RCON][DEBUG]: PlayerController Exec called with:");
+	logWideString(str.str);
+#endif
 	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
+#ifdef _DEBUG_
+		log("[RCON][DEBUG]: Intercept command detected");
+#endif
 		queueLock.lock();
 		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
 			//check if the intercept command is large enough to contain the substitute command
@@ -630,6 +637,35 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 	}
 }
 
+// Returns position of a substring in command line args or -1
+size_t CmdGetParam(const wchar_t* param)
+{
+	size_t res = std::wstring(GetCommandLineW()).find(param);
+	bool found = (res != std::wstring::npos);
+	
+	//wprintf(L"CmdGetParam: %ls %ls %d\n", param, (found ? L":) found" : L":( not found"), found ? res : -1);
+	return found ? res : -1;
+}
+
+// Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
+std::wstring CmdParseParam(const wchar_t* param, const wchar_t * addPrefix = L"", const wchar_t * addSuffix = L"")
+{
+	std::wstring commandLine = GetCommandLineW();
+	size_t paramPos = CmdGetParam(param);
+	if (paramPos == -1)
+		return L"";
+
+	size_t offset = paramPos + lstrlenW(param) + 1;
+	size_t paramEnd = commandLine.find(L" ", offset);
+	if (paramPos == -1)
+		return L"";
+	std::wstring res = commandLine.substr(offset, paramEnd - offset);
+
+	/*logWideString(const_cast<wchar_t*>(param));
+	logWideString(const_cast<wchar_t*>(res.c_str()));*/
+	return (addPrefix + res + addSuffix).c_str();
+}
+
 //#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
 DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 {
@@ -651,6 +687,141 @@ DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 	}
 	else
 		return o_LoadFrontEndMap(this_ptr, param_1);
+}
+
+bool extractPlayerCommand(const wchar_t* input, std::wstring& playerName, std::wstring& command) {
+	// Define the regular expression pattern
+	std::wregex pattern(L"(.+) <0>: /cmd (.+)");
+
+	// Convert the input to a wstring
+	std::wstring inputString(input);
+
+	// Define a wsmatch object to store the matched groups
+	std::wsmatch matches;
+
+	// Try to match the pattern in the input string
+	if (std::regex_search(inputString, matches, pattern)) {
+		if (matches.size() == 3) {
+			playerName = matches[1].str();
+			command = matches[2].str();
+			return true; // Match found
+		}
+	}
+
+	return false; // No match found
+}
+
+#define LOG_PATH ""
+
+bool IsServerStart()
+{
+	bool isHeadless = CmdGetParam(L"-nullrhi") != -1;
+	bool isSetToTravel = CmdGetParam(L"--next-map-name") != -1;
+	return isHeadless || isSetToTravel;
+}
+
+
+DECL_HOOK(void, ExecuteConsoleCommand, (FString2* param)) {
+	log("EXECUTECONSOLECMD:");
+	logWideString(param->str);
+	o_ExecuteConsoleCommand(param);
+}
+
+void* CurGameMode = NULL;
+// ATBLGameMode * __cdecl UTBLSystemLibrary::GetTBLGameMode(UObject *param_1)
+DECL_HOOK(void*, GetTBLGameMode, (void* uobj)) {
+	//log("GetTBLGameMode");
+	CurGameMode = o_GetTBLGameMode(uobj);
+	return CurGameMode;
+}
+
+//FText* __cdecl FText::AsCultureInvariant(FText* __return_storage_ptr__, FString* param_1)
+DECL_HOOK(void*, FText_AsCultureInvariant, (void* ret_ptr, FString2* input)) {
+
+	if (input->str != NULL) {
+		printf("FText_AsCultureInvariant: ");
+		logWideString(input->str);
+	}
+	return o_FText_AsCultureInvariant(ret_ptr, input);
+}
+
+//void __thiscall ATBLGameMode::BroadcastLocalizedChat(ATBLGameMode *this,FText *param_1,Type param_2)
+DECL_HOOK(void, BroadcastLocalizedChat, (void* game_mode, FText* text, uint8_t chat_type)) {
+	log("BroadcastLocalizedChat");
+	return o_BroadcastLocalizedChat(game_mode, text, chat_type);
+}
+
+/*
+void __thiscall
+APlayerController::ClientMessage
+		  (APlayerController *this,FString *param_1,FName param_2,float param_3)
+*/
+DECL_HOOK(void, ClientMessage, (void* this_ptr, FString* param_1, void * param_2, float param_3))
+{
+	std::wstring commandLine = GetCommandLineW();
+	size_t flagLoc = commandLine.find(L"--next-map");
+	bool egs = CmdGetParam(L"-epicapp=Peppermint") != -1;
+	static uint64_t init = false;
+	//log("ClientMessage");
+
+	char* pValue;
+	size_t len;
+	char ladBuff[256];
+	errno_t err = _dupenv_s(&pValue, &len, "LOCALAPPDATA");
+
+	// TODO: make this nicer
+	strncpy_s(ladBuff, 256, pValue, len);
+	strncpy_s(ladBuff + len - 1, 256 - len, "\\Chivalry 2\\Saved\\Logs\\Unchained", 34);
+
+	_mkdir(ladBuff);
+	sprintf_s(ladBuff, 256, "%s\\Chivalry 2\\Saved\\Logs\\Unchained\\ClientMessage%s%s.log",
+		pValue, (IsServerStart() ? "-server" : "-client"), (egs ? "-egs" : "-steam"));
+	if (!init)
+		log(ladBuff);
+	//log(ladBuff);
+	std::wofstream  out(ladBuff, init++ ? std::ios_base::app : std::ios_base::trunc);
+	if (out.is_open())
+		out << init << L":: " << param_1->str << std::endl;
+	else
+		log("Can't open ClientMessage log for writing.");
+
+	/*if (flagLoc == std::wstring::npos) {
+		o_ClientMessage(this_ptr, param_1, param_2, param_3);
+		return;
+	}*/
+
+	static std::wstring playerName;
+	auto command = std::make_unique<std::wstring>();
+
+	if (extractPlayerCommand(param_1->str, playerName, *command)) {
+		std::wcout << L"Player Name: " << playerName << std::endl;
+		std::wcout << L"Command: " << command->c_str() << std::endl;
+
+		FText txt;
+		void * res = o_FText_AsCultureInvariant(&txt, new FString2(L"Hello from UnchainedPlugin"));
+		if (res != NULL && CurGameMode != NULL)
+		{
+			log("We Gucci");
+			o_BroadcastLocalizedChat(CurGameMode, (FText *)res, 3);
+		}
+
+		queueLock.lock();
+		log("Executing command");
+		logWideString(const_cast<wchar_t*>(command->c_str()));
+		//commandQueue.emplace(std::move(command)); //put the command into the queue
+		queueLock.unlock();
+		auto empty = FString2(command->c_str());
+
+		o_ExecuteConsoleCommand(&empty);
+		if (false) {
+			wcscpy_s(param_1->str, lstrlenW(param_1->str) + 1, command->c_str());
+			o_ConsoleCommand(cached_this, *param_1, false);
+		}
+	}
+	else {
+		//std::wcout << L"No valid match found." << std::endl;
+	}
+	o_ClientMessage(this_ptr, param_1, param_2, param_3);
 }
 
 void* UWORLD = nullptr;
@@ -952,6 +1123,14 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, ClientMessage);
 #endif 
 	
+	HOOK_ATTACH(module_base, ClientMessage);
+	HOOK_ATTACH(module_base, ExecuteConsoleCommand);
+	HOOK_ATTACH(module_base, GetTBLGameMode);
+	HOOK_ATTACH(module_base, FText_AsCultureInvariant);
+	HOOK_ATTACH(module_base, BroadcastLocalizedChat);
+	
+	// ServerPlugin
+	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
 
 	// From ServerPlugin
 	// Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
