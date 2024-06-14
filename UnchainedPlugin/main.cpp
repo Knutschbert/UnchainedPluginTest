@@ -10,7 +10,6 @@
 #include <fstream>
 #include <iomanip>
 #include <mutex>
-#include <queue>
 #include <string>
 #include "tiny-json/tiny-json.h"
 #include <winhttp.h>
@@ -565,54 +564,31 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 	return val;
 }
 
-std::mutex queueLock;
-std::queue<std::unique_ptr<std::wstring>> commandQueue;
 DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b)) {
+#ifdef _DEBUG_
 	static void* cached_this;
 	if (this_ptr == NULL) {
 		this_ptr = cached_this;
 	}
 	else {
-		cached_this = this_ptr;
+		if (cached_this != this_ptr) {
+			cached_this = this_ptr;
+			//std::cout << "0x" << std::hex << this_ptr << std::endl;
+		}
 	}
-#ifdef _DEBUG_
+
 	log("[RCON][DEBUG]: PlayerController Exec called with:");
 	logWideString(str.str);
-#endif
+
 	const wchar_t* interceptPrefix = L"RCON_INTERCEPT";
 	//if the command starts with the intercept prefix
 	//TODO: clean up mutex stuff here. Way too sloppy to be final
 	if (wcslen(str.str) >= 14 && memcmp(str.str, interceptPrefix, lstrlenW(interceptPrefix) * sizeof(wchar_t)) == 0) {
-#ifdef _DEBUG_
-		log("[RCON][DEBUG]: Intercept command detected");
-#endif
-		queueLock.lock();
-		if (commandQueue.size() > 0) { //if the queue is empty we want to just return as normal
-			//check if the intercept command is large enough to contain the substitute command
-			if (wcslen(commandQueue.front()->c_str()) > wcslen(str.str)) {
-				log("[WARNING][RCON]: Intercept command too small to contain substitute command. Command was thrown out.");
-				//throw away the substitute command to keep it from
-				//clogging the queue. In a headless instance, it's unlikely
-				//the intercepted command will ever be larger than it is now.
-				commandQueue.pop();
-				queueLock.unlock();
-				return o_ConsoleCommand(this_ptr, str, b);
-			}
-			//pull the substitute command off the queue
-			auto command = std::move(commandQueue.front());
-			commandQueue.pop();
-			queueLock.unlock(); //unlock the mutex
-			//log("pretend we ran the command");
-			//copy the substitute command over top of the intercepted command
-			wcscpy_s(str.str, lstrlenW(str.str) + 1, command->c_str());
 
-			log("[RCON]: command substituted:");
-			logWideString(str.str);
-			return o_ConsoleCommand(this_ptr, str, b);
-		}
-		queueLock.unlock();
+		log("[RCON][DEBUG]: Intercept command detected");
 	}
-	//std::cout << "0x" << std::hex << this_ptr << std::endl;
+#endif
+	
 	return o_ConsoleCommand(this_ptr, str, b);
 }
 
@@ -773,25 +749,19 @@ DECL_HOOK(void, ClientMessage, (void* this_ptr, FString* param_1, void * param_2
 		std::wcout << L"Command: " << command->c_str() << std::endl;
 
 		FText txt;
-		void * res = o_FText_AsCultureInvariant(&txt, new FString2(L"Hello from UnchainedPlugin"));
+		void * res = o_FText_AsCultureInvariant(&txt, new FString2(L"Command detected"));
 		if (res != NULL && CurGameMode != NULL)
 		{
-			log("We Gucci");
+			log("[ChatCommands] Could print server text");
 			o_BroadcastLocalizedChat(CurGameMode, (FText *)res, 3);
 		}
 
-		queueLock.lock();
-		log("Executing command");
+		log("[ChatCommands] Executing command");
 		logWideString(const_cast<wchar_t*>(command->c_str()));
-		//commandQueue.emplace(std::move(command)); //put the command into the queue
-		queueLock.unlock();
+
 		auto empty = FString2(command->c_str());
 
 		o_ExecuteConsoleCommand(&empty);
-		//if (false) {
-		//	wcscpy_s(param_1->str, lstrlenW(param_1->str) + 1, command->c_str());
-		//	o_ConsoleCommand(cached_this, *param_1, false);
-		//}
 	}
 	else {
 		//std::wcout << L"No valid match found." << std::endl;
@@ -1011,11 +981,8 @@ void handleRCON() {
 		}
 
 		//add into command queue
-		queueLock.lock();
-		log("[RCON]: added command to queue: ");
-		logWideString(const_cast<wchar_t*>(command->c_str()));
-		commandQueue.emplace(std::move(command)); //put the command into the queue
-		queueLock.unlock();
+		FString2 commandString(command->c_str());
+		o_ExecuteConsoleCommand(&commandString);
 	}
 
 	return;
