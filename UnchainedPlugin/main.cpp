@@ -711,11 +711,12 @@ DECL_HOOK(void*, GetTBLGameMode, (void* uobj)) {
 
 //FText* __cdecl FText::AsCultureInvariant(FText* __return_storage_ptr__, FString* param_1)
 DECL_HOOK(void*, FText_AsCultureInvariant, (void* ret_ptr, FString2* input)) {
-
-	if (input->str != NULL) {
-		printf("FText_AsCultureInvariant: ");
-		logWideString(input->str);
-	}
+	// This is extremely loud in the console
+	//if (input->str != NULL) {
+	//	printf("FText_AsCultureInvariant: ");
+	//	wprintf(input->str);
+	//  printf("\n");
+	//}
 	return o_FText_AsCultureInvariant(ret_ptr, input);
 }
 
