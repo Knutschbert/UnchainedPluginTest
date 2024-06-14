@@ -117,7 +117,10 @@ uint32_t calculateCRC32(const std::string& filename) {
 size_t CmdGetParam(const wchar_t* param)
 {
 	size_t res = std::wstring(GetCommandLineW()).find(param);
-	return (res != std::wstring::npos) ? res : -1;
+	bool found = (res != std::wstring::npos);
+
+	//wprintf(L"CmdGetParam: %ls %ls %d\n", param, (found ? L":) found" : L":( not found"), found ? res : -1);
+	return found ? res : -1;
 }
 
 // Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
@@ -637,35 +640,6 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 	}
 }
 
-// Returns position of a substring in command line args or -1
-size_t CmdGetParam(const wchar_t* param)
-{
-	size_t res = std::wstring(GetCommandLineW()).find(param);
-	bool found = (res != std::wstring::npos);
-	
-	//wprintf(L"CmdGetParam: %ls %ls %d\n", param, (found ? L":) found" : L":( not found"), found ? res : -1);
-	return found ? res : -1;
-}
-
-// Returns parsed parameter (1 char spacing req), pre-/appends text if needed.
-std::wstring CmdParseParam(const wchar_t* param, const wchar_t * addPrefix = L"", const wchar_t * addSuffix = L"")
-{
-	std::wstring commandLine = GetCommandLineW();
-	size_t paramPos = CmdGetParam(param);
-	if (paramPos == -1)
-		return L"";
-
-	size_t offset = paramPos + lstrlenW(param) + 1;
-	size_t paramEnd = commandLine.find(L" ", offset);
-	if (paramPos == -1)
-		return L"";
-	std::wstring res = commandLine.substr(offset, paramEnd - offset);
-
-	/*logWideString(const_cast<wchar_t*>(param));
-	logWideString(const_cast<wchar_t*>(res.c_str()));*/
-	return (addPrefix + res + addSuffix).c_str();
-}
-
 //#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
 DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 {
@@ -813,10 +787,10 @@ DECL_HOOK(void, ClientMessage, (void* this_ptr, FString* param_1, void * param_2
 		auto empty = FString2(command->c_str());
 
 		o_ExecuteConsoleCommand(&empty);
-		if (false) {
-			wcscpy_s(param_1->str, lstrlenW(param_1->str) + 1, command->c_str());
-			o_ConsoleCommand(cached_this, *param_1, false);
-		}
+		//if (false) {
+		//	wcscpy_s(param_1->str, lstrlenW(param_1->str) + 1, command->c_str());
+		//	o_ConsoleCommand(cached_this, *param_1, false);
+		//}
 	}
 	else {
 		//std::wcout << L"No valid match found." << std::endl;
