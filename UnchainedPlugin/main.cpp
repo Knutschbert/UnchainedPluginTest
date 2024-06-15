@@ -160,6 +160,10 @@ std::wstring HTTPGet(const std::wstring* url) {
 	lpUrlComponents.dwHostNameLength = (DWORD)-1;  // Let WinHttpCrackUrl allocate memory.
 	lpUrlComponents.dwUrlPathLength = (DWORD)-1;   // Let WinHttpCrackUrl allocate memory.
 
+	// TODO: these are probably allocated unnecessarily.
+	// Previous statements suggest that the Crack call will
+	// allocate those buffers itself
+	
 	// Allocate buffers for the URL components
 	wchar_t* schemeBuf = new wchar_t[url->length() + 1];
 	wchar_t* hostNameBuf = new wchar_t[url->length() + 1];
