@@ -58,7 +58,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>Lib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Lib;include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,8 +102,10 @@
     <ClCompile Include="Lib\MinHook\src\trampoline.c" />
     <ClCompile Include="Lib\tiny-json\tiny-json.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="logging.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\logging.h" />
     <ClInclude Include="include\main.h" />
     <ClInclude Include="include\sigs.h" />
     <ClCompile Include="include\UE4.h" />

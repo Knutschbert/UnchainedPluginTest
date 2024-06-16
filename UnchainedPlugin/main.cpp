@@ -17,12 +17,14 @@
 //always open output window
 #define _DEBUG
 
-#include "include/main.h"
-#include "include/Chivalry2.h"
-#include "include/UE4.h"
+#include "main.h"
+#include "Chivalry2.h"
+#include "UE4.h"
+#include "logging.h"
 
 
 //black magic for the linker to get winsock2 to work
+//TODO: properly add this to the linker settings
 #pragma comment(lib, "Ws2_32.lib")
 
 //always open output window
@@ -36,10 +38,6 @@
 
 #define DEFAULT_SERVER_BROWSER_BACKEND L"https://servers.polehammer.net"
 #define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
-
-int logFString(FString str) {
-	return logWideString(str.str);
-}
 
 struct BuildType {
 	~BuildType() {

@@ -19,47 +19,6 @@ _________  .__     .__                .__                    ________
 
 // Helper functions
 
-void log(const char* str) {
-#ifndef _DEBUG
-	return;
-#endif
-	std::cout << str << std::endl;
-
-}
-
-
-int logWideString(wchar_t* str) {
-#ifndef _DEBUG
-    return 0;
-#endif
-    int i = 0;
-    const wchar_t* tempStr = str; // Use a temporary pointer
-    while (*tempStr != 0) {
-        std::wcout << *tempStr;
-        tempStr++; // Increment the temporary pointer instead of the input pointer
-        i++;
-    }
-    std::wcout << std::endl;
-    return i;
-}
-
-
-int logWideString(const wchar_t* str) {
-#ifndef _DEBUG
-	return 0;
-#endif
-	int i = 0;
-	const wchar_t* tempStr = str; // Use a temporary pointer
-	while (*tempStr != 0) {
-		std::wcout << *tempStr;
-		tempStr++; // Increment the temporary pointer instead of the input pointer
-		i++;
-	}
-	std::wcout << std::endl;
-	return i;
-}
-
-
 long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const char* signature)
 {
 	const void* found = nullptr;
