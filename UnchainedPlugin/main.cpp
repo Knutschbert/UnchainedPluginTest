@@ -7,8 +7,6 @@
 #include <fcntl.h>
 #include <io.h>
 #include <fstream>
-#include <iomanip>
-#include <mutex>
 #include <string>
 
 #include <direct.h>
@@ -28,7 +26,6 @@
 //TODO: properly add this to the linker settings
 #pragma comment(lib, "Ws2_32.lib")
 
-#include <cstdint>
 #include <regex>
 
 DECL_HOOK(void, FString_AppendChars, (FString* this_ptr, const wchar_t* Str, int Count)) {

@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿// TODO: remove this file entirely. The concept of a main.h
+// is nonsensical from an organization persepctive
+
+#pragma once
 #include <Sig/Sig.hpp>
 // TODO: this include gives HMODULE and stuff, for when this file eventually gets
 // deleted and its contents moved elsewhere
