@@ -4,10 +4,7 @@
 #define DEFAULT_SERVER_BROWSER_BACKEND L"https://servers.polehammer.net"
 #define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
 
-//always open output window
-#define _DEBUG
-
-const char* logo = R"( 
+#define UNCHAINED_LOGO R"( 
 _________  .__     .__                .__                    ________             
 \_   ___ \ |  |__  |__|___  _______   |  |  _______  ___.__. \_____  \        
 /    \  \/ |  |  \ |  |\  \/ /\__  \  |  |  \_  __ \<   |  |  /  ____/   
@@ -20,4 +17,4 @@ _________  .__     .__                .__                    ________
 |    |  / |   |  \\  \___ |   Y  \ / __ \_|  ||   |  \\  ___/ / /_/ |      
 |______/  |___|  / \___  >|___|  /(____  /|__||___|  / \___  >\____ |          
                \/      \/      \/      \/          \/      \/      \/      
-)";
+)"

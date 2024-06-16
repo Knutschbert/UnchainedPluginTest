@@ -49,6 +49,12 @@
     <ClCompile Include="logging.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="include\nettools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="include\commandline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\main.h">
@@ -94,6 +100,12 @@
       <Filter>Source Headers</Filter>
     </ClInclude>
     <ClInclude Include="include\constants.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\nettools.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\commandline.h">
       <Filter>Source Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -95,6 +95,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="include\nettools.cpp" />
+    <ClCompile Include="include\commandline.cpp" />
     <ClCompile Include="Lib\MinHook\src\buffer.c" />
     <ClCompile Include="Lib\MinHook\src\hde\hde32.c" />
     <ClCompile Include="Lib\MinHook\src\hde\hde64.c" />
@@ -106,6 +108,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\constants.h" />
+    <ClInclude Include="include\commandline.h" />
+    <ClInclude Include="include\nettools.h" />
     <ClInclude Include="include\logging.h" />
     <ClInclude Include="include\main.h" />
     <ClInclude Include="include\sigs.h" />
