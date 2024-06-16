@@ -111,6 +111,12 @@
     <ClInclude Include="builds.h" />
     <ClInclude Include="include\constants.h" />
     <ClInclude Include="include\commandline.h" />
+    <ClInclude Include="include\backendHooks.h" />
+    <ClInclude Include="include\assetLoading.h" />
+    <ClInclude Include="include\adminControl.h" />
+    <ClInclude Include="include\etcHooks.h" />
+    <ClInclude Include="include\unchainedIntegration.h" />
+    <ClInclude Include="include\ownershipOverrides.h" />
     <ClInclude Include="include\nettools.h" />
     <ClInclude Include="include\logging.h" />
     <ClInclude Include="include\main.h" />

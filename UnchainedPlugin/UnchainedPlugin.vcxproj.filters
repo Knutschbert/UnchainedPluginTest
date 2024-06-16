@@ -114,6 +114,24 @@
     <ClInclude Include="builds.h">
       <Filter>Source Headers</Filter>
     </ClInclude>
+    <ClInclude Include="include\backendHooks.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ownershipOverrides.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assetLoading.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\unchainedIntegration.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\adminControl.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\etcHooks.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
