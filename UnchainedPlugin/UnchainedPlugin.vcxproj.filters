@@ -93,6 +93,9 @@
     <ClInclude Include="include\logging.h">
       <Filter>Source Headers</Filter>
     </ClInclude>
+    <ClInclude Include="include\constants.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />

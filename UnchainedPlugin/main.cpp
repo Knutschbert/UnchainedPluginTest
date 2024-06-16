@@ -14,30 +14,22 @@
 #include "tiny-json/tiny-json.h"
 #include <winhttp.h>
 #include <direct.h>
-//always open output window
-#define _DEBUG
 
+// TODO: temporarily, this include should stay precisely here
+// because it may set _DEBUG which functions currently rely on
+#include "constants.h"
 #include "main.h"
 #include "Chivalry2.h"
 #include "UE4.h"
 #include "logging.h"
 
-
 //black magic for the linker to get winsock2 to work
 //TODO: properly add this to the linker settings
 #pragma comment(lib, "Ws2_32.lib")
 
-//always open output window
-#define _DEBUG
-
-//#define TARGET_API_ROOT L"localhost"
-
 #include <cstdint>
 #include <nmmintrin.h> // SSE4.2 intrinsics
 #include <regex>
-
-#define DEFAULT_SERVER_BROWSER_BACKEND L"https://servers.polehammer.net"
-#define SERVER_BROWSER_BACKEND_CLI_ARG L"--server-browser-backend"
 
 struct BuildType {
 	~BuildType() {
@@ -67,9 +59,6 @@ BuildType curBuild;
 bool jsonDone = false;
 bool offsetsLoaded = false;
 bool needsSerialization = true;
-
-// This macro assumes that 'utf8bytes' is a null-terminated string.
-#define UTF8_TO_TCHAR(utf8bytes) Utf8ToTChar(utf8bytes)
 
 // Helper function that uses Windows API to convert UTF-8 to wchar_t array (TCHAR)
 const wchar_t* Utf8ToTChar(const char* utf8bytes)
@@ -279,7 +268,7 @@ std::wstring HTTPGet(const std::wstring* url) {
 					}
 					else {
 						// Data has been read successfully.
-						std::wstring chunk = UTF8_TO_TCHAR(pszOutBuffer);
+						std::wstring chunk = Utf8ToTChar(pszOutBuffer);
 						response.append(chunk);
 					}
 
@@ -618,11 +607,10 @@ int parsePortParams(std::wstring commandLine, size_t flagLoc) {
 	}
 }
 
-//#define FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
+// FRONTEND_MAP_FMT L"Frontend%ls?mods=%ls?nextmap=%ls?nextmods=%ls?defmods=%ls"
 DECL_HOOK(bool, LoadFrontEndMap, (void* this_ptr, FString* param_1))
 {
 	static wchar_t szBuffer[512];
-
 
 	static bool init = false;
 	if (true) {
@@ -662,8 +650,6 @@ bool extractPlayerCommand(const wchar_t* input, std::wstring& playerName, std::w
 
 	return false; // No match found
 }
-
-#define LOG_PATH ""
 
 bool IsServerStart()
 {

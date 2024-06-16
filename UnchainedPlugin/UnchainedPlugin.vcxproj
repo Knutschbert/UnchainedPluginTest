@@ -105,6 +105,7 @@
     <ClCompile Include="logging.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\constants.h" />
     <ClInclude Include="include\logging.h" />
     <ClInclude Include="include\main.h" />
     <ClInclude Include="include\sigs.h" />
