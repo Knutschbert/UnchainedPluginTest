@@ -55,6 +55,9 @@
     <ClCompile Include="include\commandline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="builds.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\main.h">
@@ -106,6 +109,9 @@
       <Filter>Source Headers</Filter>
     </ClInclude>
     <ClInclude Include="include\commandline.h">
+      <Filter>Source Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="builds.h">
       <Filter>Source Headers</Filter>
     </ClInclude>
   </ItemGroup>

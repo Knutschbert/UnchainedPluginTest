@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include <Sig/Sig.hpp>
+// TODO: this include gives HMODULE and stuff, for when this file eventually gets
+// deleted and its contents moved elsewhere
+//#include <windows.h> 
 #include "sigs.h"
 
 // Helper functions
