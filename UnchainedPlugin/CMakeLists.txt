@@ -6,7 +6,6 @@ file(GLOB SOURCES "*.cpp" "include/*.cpp")
 file(GLOB HEADERS "*.h" "include/*.h")
 
 source_group("Source Files\\Utils" FILES
-    builds.cpp
     logging.cpp
     include/commandline.cpp
     include/nettools.cpp
@@ -19,9 +18,6 @@ source_group("Header Files\\Utils" FILES
 )
 
 source_group("Header Files\\Hooks" FILES
-    include/commandline.h
-    include/logging.h
-    include/nettools.h
     include/adminControl.h
     include/assetLoading.h
     include/backendHooks.h
