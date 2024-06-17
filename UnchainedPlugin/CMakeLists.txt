@@ -36,13 +36,26 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 option(WITH__DEBUG "Set _DEBUG flag" ON)
+option(PRINT_CLIENT_MSG "Output chat messages to CLI" OFF)
+option(POST_BUILD_COPY "Copy output file to specified dir" ON)
+set(POST_BUILD_COPY_DIR "I:\\Epic Games\\Chivalry2_c\\TBL\\Binaries\\Win64\\Plugins" CACHE STRING "Directory to copy to")
+
 if(WITH__DEBUG)
     target_compile_definitions(${TARGET} PUBLIC _DEBUG)
 endif()
 
-option(PRINT_CLIENT_MSG "Output chat messages to CLI" OFF)
 if(PRINT_CLIENT_MSG)
     target_compile_definitions(${TARGET} PUBLIC PRINT_CLIENT_MSG)
+endif()
+
+if(POST_BUILD_COPY)
+    add_custom_command(
+        TARGET ${TARGET}  POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                $<TARGET_FILE:${TARGET}>
+                ${POST_BUILD_COPY_DIR}/${TARGET}.dll && echo
+                ${TARGET}.dll copied to ${POST_BUILD_COPY_DIR}
+    )
 endif()
 
 add_subdirectory(Lib/MinHook)
