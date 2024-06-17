@@ -1,10 +1,7 @@
-# Specify the minimum CMake version
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 
-# Set the project name
 project(MinHook)
 
-# Add sources
 set(MINHOOK_SOURCES
     src/buffer.c
     src/hook.c
@@ -13,7 +10,6 @@ set(MINHOOK_SOURCES
     src/hde/hde64.c
 )
 
-# Add headers
 set(MINHOOK_HEADERS
     include/MinHook.h
     src/buffer.h
@@ -25,8 +21,6 @@ set(MINHOOK_HEADERS
     src/hde/table64.h
 )
 
-# Create a static library
 add_library(MinHook STATIC ${MINHOOK_SOURCES} ${MINHOOK_HEADERS})
 
-# Include directories
 target_include_directories(MinHook PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
