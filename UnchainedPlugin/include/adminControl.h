@@ -1,6 +1,9 @@
 #pragma once
 
 #include <regex>
+#include <mutex>
+#include <queue>
+#include "UE4.h"
 
 DECL_HOOK(FString, ConsoleCommand, (void* this_ptr, FString const& str, bool b)) {
 #ifdef _DEBUG_
@@ -34,6 +37,55 @@ DECL_HOOK(void, ExecuteConsoleCommand, (FString2* param)) {
 	log("EXECUTECONSOLECMD:");
 	logWideString(param->str);
 	o_ExecuteConsoleCommand(param);
+}
+
+std::queue<std::wstring> adminCommandQueue;
+std::mutex adminCommandMutex;
+void runOneConsoleCommand() {
+	// NOTE: You CAN NOT call o_ExecuteConsoleCommand while the lock is
+	// held, because that function may call processEvent, hit this hook,
+	// and try to get the lock while it is held by the first call
+	std::wstring command;
+	bool shouldRunCommand = false;
+	{
+		const std::lock_guard<std::mutex> lock(adminCommandMutex);
+		if (!adminCommandQueue.empty()) {
+			shouldRunCommand = true;
+			command = std::move(adminCommandQueue.front());
+			adminCommandQueue.pop();
+		}
+
+	} // this interior scope is important for timely automatic unlocking!
+
+	if (shouldRunCommand) {
+		FString2 wrappedCommand(command.c_str());
+		o_ExecuteConsoleCommand(&wrappedCommand);
+		log("[RCON] Ran console command:");
+		logWideString(command.c_str());
+	}
+}
+
+void scheduleConsoleCommand(const std::wstring const& command) {
+	const std::lock_guard<std::mutex> lock(adminCommandMutex);
+	// move is important so that the global queue owns the object
+	adminCommandQueue.push(command);
+}
+
+// Only hooked because this function is called extremely often and reliably
+// currently used as a polling event to run console commands safely
+// from within the proper game thread(s)
+DECL_HOOK(void, AActor_ProcessEvent, (void* this_ptr, void* a1, void* a2)) {
+	// since this function is called so many times a second,
+	// only try to run a console command every 100 or so calls to avoid overhead issues
+	static int count = 0;
+	if (count > 100 || count < 0) {
+		count = 0;
+		//log("AActor_ProcessEvent tried to run command");
+		runOneConsoleCommand();
+	}
+	count++;
+
+	return o_AActor_ProcessEvent(this_ptr, a1, a2);
 }
 
 //FText* __cdecl FText::AsCultureInvariant(FText* __return_storage_ptr__, FString* param_1)

@@ -101,7 +101,7 @@ void handleRCON() {
 
 	while (true) {
 		//set up a new command string
-		auto command = std::make_unique<std::wstring>();
+		std::wstring command;
 		log("[RCON]: Waiting for command");
 		//get a command from a socket
 		int addrLen = sizeof(addr);
@@ -124,18 +124,16 @@ void handleRCON() {
 			//convert to wide string
 			std::string chunkString(buffer, count);
 			std::wstring wideChunkString(chunkString.begin(), chunkString.end() - 1);
-			*command += wideChunkString; //append this chunk to the command
+			command += wideChunkString; //append this chunk to the command
 		} while (buffer[count - 1] != '\n');
 		//we now have the whole command as a wide string
 		closesocket(remote);
 
-		if (command->size() == 0) {
+		if (command.size() == 0) {
 			continue;
 		}
 
-		//add into command queue
-		FString2 commandString(command->c_str());
-		o_ExecuteConsoleCommand(&commandString);
+		scheduleConsoleCommand(command);
 	}
 
 	return;
@@ -223,6 +221,7 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, GetTBLGameMode);
 	HOOK_ATTACH(module_base, FText_AsCultureInvariant);
 	HOOK_ATTACH(module_base, BroadcastLocalizedChat);
+	HOOK_ATTACH(module_base, AActor_ProcessEvent);
 	
 	// ServerPlugin
 	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
