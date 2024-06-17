@@ -12,7 +12,7 @@
 #include <direct.h>
 
 //always open output window
-#define _DEBUG
+//#define _DEBUG
 #include "constants.h"
 #include "main.h"
 #include "Chivalry2.h"

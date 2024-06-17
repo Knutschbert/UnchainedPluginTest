@@ -30,6 +30,21 @@ source_group("Header Files\\Hooks" FILES
 add_library(${TARGET} SHARED ${SOURCES} ${HEADERS})
 target_include_directories(${TARGET} PUBLIC include "Lib/Sig")
 
+
+set_target_properties(${TARGET} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Output"
+)
+
+option(WITH__DEBUG "Set _DEBUG flag" ON)
+if(WITH__DEBUG)
+    target_compile_definitions(${TARGET} PUBLIC _DEBUG)
+endif()
+
+option(PRINT_CLIENT_MSG "Output chat messages to CLI" OFF)
+if(PRINT_CLIENT_MSG)
+    target_compile_definitions(${TARGET} PUBLIC PRINT_CLIENT_MSG)
+endif()
+
 add_subdirectory(Lib/MinHook)
 add_subdirectory(Lib/tiny-json)
 
