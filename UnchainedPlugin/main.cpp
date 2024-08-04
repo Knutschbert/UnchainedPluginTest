@@ -224,12 +224,17 @@ unsigned long main_thread(void* lpParameter) {
 	HOOK_ATTACH(module_base, FText_AsCultureInvariant);
 	HOOK_ATTACH(module_base, BroadcastLocalizedChat);
 	
-	// ServerPlugin
-	auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
+	if (curBuild.offsets[F_UTBLLocalPlayer_Exec])
+	{
+		// ServerPlugin
+		auto cmd_permission{ module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec] }; // Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
 
-	// From ServerPlugin
-	// Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
-	Ptch_Repl(module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec], 0xEB);
+		// From ServerPlugin
+		// Patch for command permission when executing commands (UTBLLocalPlayer::Exec)
+		Ptch_Repl(module_base + curBuild.offsets[F_UTBLLocalPlayer_Exec], 0xEB);
+	}
+	else
+		log("F_UTBLLocalPlayer_Exec missing");
 	
 	/*printf("offset dedicated: 0x%08X", curBuild.offsets[F_UGameplay__IsDedicatedServer] + 0x22);
 	Ptch_Repl(module_base + curBuild.offsets[F_UGameplay__IsDedicatedServer] + 0x22, 0x2);*/

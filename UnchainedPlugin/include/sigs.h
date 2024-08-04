@@ -91,14 +91,14 @@ static const char* signatures[F_MaxFuncType + 1] =
 	/*"FindFileInPakFiles_2"*/ 
 	"48 8B C4 4C 89 48 ?? 4C 89 40 ?? 48 89 48 ?? 55 53 48 8B EC",
 	/*"UTBLLocalPlayer::Exec"*/
-	"75 1A 45 84 ED 75 15 48 85 F6 74 10 40 38 BE ? ? ? ? 74 07 32 DB E9 ? ? ? ? 48 8B 5D 60 49 8B D6 4C 8B 45 58 4C 8B CB 49 8B CF",
+	"75 18 ?? ?? ?? ?? 75 12 4d 85 f6 74 0d 41 38 be ?? ?? ?? ?? 74 04 32 db eb 9b 48 8b 5d 7f 49 8b d5 4c 8b 45 77 4c 8b cb 49 8b cf",
 	/*"GetGameInfo"*/
 	"48 8B C4 48 89 58 ?? 48 89 50 ?? 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC E0 02 00 00",
 	/*ConsoleCommand*/
 	"40 53 48 83 EC 20 48 8B 89 D0 02 00 00 48 8B DA 48 85 C9 74 0E E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 20 5B C3 33 C0 48 89 02 48 \
 	89 42 08 48 8B C3 48 83 C4 20 5B C3",
 	/*LoadFrontEndMap*/
-	"48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 48 8D 6C 24 D0 48 81 EC 30 01 00 00 4C 8B E2",
+	"48 8B C4 48 89 50 10 48 89 48 08 55 41 55 48 8D 68 98 48 81 EC 58 01 00 00 83 7A 08 00",
 	/*ATBLPlayerController::CanUseLoadoutItem*/
 	"48 89 5C 24 08 48 89 74 24 10 55 57 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00",
 	/*ATBLPlayerController::CanUseCharacter*/
