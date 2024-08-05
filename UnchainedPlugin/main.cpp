@@ -2,7 +2,7 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <psapi.h>
-#include <MinHook/include/MinHook.h>
+#include <MinHook.h>
 #include <iostream>
 #include <fcntl.h>
 #include <io.h>
@@ -12,7 +12,7 @@
 #include <direct.h>
 
 //always open output window
-#define _DEBUG
+//#define _DEBUG
 #include "constants.h"
 #include "main.h"
 #include "Chivalry2.h"

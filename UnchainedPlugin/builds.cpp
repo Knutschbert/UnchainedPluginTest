@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "tiny-json/tiny-json.h"
+#include "tiny-json.h"
 
 #include <nmmintrin.h> // SSE4.2 intrinsics
 uint32_t calculateCRC32(const std::string& filename) {
