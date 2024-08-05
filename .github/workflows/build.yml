@@ -15,13 +15,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      
-      
-      - name: Generate and Print Commit Summary
-        id: get_prev_tag
-        shell: bash
-        run: |
-          echo "Previous_Tag=$(git tag --sort=-creatordate | sed -n 2p)" >> $GITHUB_OUTPUT
 
       - name: Generate and Print Commit Summary
         id: generate_summary
@@ -37,10 +30,9 @@ jobs:
           # Print the current and previous tags for debugging
           echo "Current tag: $new_tag"
           echo "Previous tag: $previous_tag"
-          echo "Previous tag: ${{ env.Previous_Tag }}"
 
           # Generate the commit summary between the two tags
-          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "${{ env.Previous_Tag }}..$new_tag")
+          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
 
           # Print the commit summary to the log
           echo "Commit Summary:"
