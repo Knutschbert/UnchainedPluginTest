@@ -81,6 +81,12 @@ jobs:
           # Remove 'refs/tags/' prefix
           new_tag="${new_tag#refs/tags/}"
 
+          {
+            echo 'annotation<<EOF'
+            git for-each-ref "${{ github.ref }}" --format '%(contents)'
+            echo 'EOF'
+          } >>"${GITHUB_OUTPUT}"
+
           previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
           commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
 
@@ -100,7 +106,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: "Release ${{ github.ref }}: ${{ env.annotation }}"
           draft: false
           prerelease: false
           body: |
