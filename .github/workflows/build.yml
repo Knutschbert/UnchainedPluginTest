@@ -77,18 +77,18 @@ jobs:
 
           # Remove 'refs/tags/' prefix
           new_tag="${new_tag#refs/tags/}"
-          tag_annotation=$(git tag -l --format='%(contents)' "$new_tag" | sed -n 1p)
+          # tag_annotation=$(git tag -l --format='%(contents)' "$new_tag" | sed -n 1p)
 
           previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
           commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
 
           echo "Current tag: $new_tag"
           echo "Previous tag: $previous_tag"
-          echo "tag_annotation: $tag_annotation"
+          # echo "tag_annotation: $tag_annotation"
           echo "Commit Summary:"
           echo "$commit_summary"
 
-          echo "tag_annotation=$tag_annotation" >> $GITHUB_ENV
+          # echo "tag_annotation=$tag_annotation" >> $GITHUB_ENV
           # echo "tag_annotation<<EOF" >> $GITHUB_ENV
           # echo "$tag_annotation" >> $GITHUB_ENV
           # echo "EOF" >> $GITHUB_ENV
@@ -104,7 +104,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: "Release ${{ github.ref }}: ${{ env.tag_annotation }}"
+          release_name: "Release ${{ github.ref }}"
           draft: false
           prerelease: false
           body: |
