@@ -84,13 +84,14 @@ jobs:
 
           echo "Current tag: $new_tag"
           echo "Previous tag: $previous_tag"
+          echo "tag_annotation: $tag_annotation"
           echo "Commit Summary:"
           echo "$commit_summary"
 
           echo "tag_annotation<<EOF" >> $GITHUB_ENV
           echo "$tag_annotation" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-          
+
           echo "summary<<EOF" >> $GITHUB_ENV
           echo "$commit_summary" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
