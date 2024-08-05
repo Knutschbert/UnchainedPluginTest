@@ -38,19 +38,15 @@ add_library(${TARGET} SHARED ${SOURCES} ${HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/v
 # add_library(${TARGET} SHARED ${SOURCES} ${HEADERS} Resource.rc)
 target_include_directories(${TARGET} PUBLIC include "Lib/Sig")
 
-
 set_target_properties(${TARGET} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Output"
+    RUNTIME_OUTPUT_DIRECTORY "../../Output"
 )
-
-option(WITH__DEBUG "Set _DEBUG flag" ON)
-option(PRINT_CLIENT_MSG "Output chat messages to CLI" OFF)
-option(POST_BUILD_COPY "Copy output file to specified dir" OFF)
-set(POST_BUILD_COPY_DIR "I:\\Epic Games\\Chivalry2_c\\TBL\\Binaries\\Win64\\Plugins" CACHE STRING "Directory to copy to")
-
-if(WITH__DEBUG)
-    target_compile_definitions(${TARGET} PUBLIC _DEBUG)
-endif()
+# install(TARGETS ${TARGET} RUNTIME DESTINATION "../Output/Cpack")
+# include(CPack)
+# set(CPACK_INSTALL_CMAKE_PROJECTS
+# "${CMAKE_CURRENT_BINARY_DIR}/Output/Debug;${TARGET};ALL;/"
+# "${CMAKE_CURRENT_BINARY_DIR}/Output/Release;${TARGET};ALL;/"
+#     )
 
 if(PRINT_CLIENT_MSG)
     target_compile_definitions(${TARGET} PUBLIC PRINT_CLIENT_MSG)
