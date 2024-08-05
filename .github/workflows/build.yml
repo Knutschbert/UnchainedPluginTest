@@ -105,7 +105,7 @@ jobs:
           prerelease: false
           body: |
             Commits for ${{ github.ref }}:
-            ${{ steps.get_commit_summary.outputs.summary }}
+            ${{ env.summary }}
 
       - name: Upload Release Assets - Release
         uses: actions/upload-release-asset@v1
