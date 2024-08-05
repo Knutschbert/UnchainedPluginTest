@@ -77,7 +77,7 @@ jobs:
 
           # Remove 'refs/tags/' prefix
           new_tag="${new_tag#refs/tags/}"
-          tag_annotation=$(git for-each-ref "${{ github.ref }}" --format '%(contents)' | sed -n 1p)
+          tag_annotation=$(git tag -l --format='%(contents)' "$new_tag" | sed -n 1p)
 
           previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
           commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
