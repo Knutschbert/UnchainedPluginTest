@@ -16,33 +16,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate and Print Commit Summary
-        id: generate_summary
-        shell: bash
-        run: |
-          new_tag=${{ github.ref }}
-          # Remove the 'refs/tags/' prefix from the tag
-          new_tag="${new_tag#refs/tags/}"
-
-          # Find the previous tag
-          previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
-
-          # Print the current and previous tags for debugging
-          echo "Current tag: $new_tag"
-          echo "Previous tag: $previous_tag"
-
-          # Generate the commit summary between the two tags
-          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
-
-          # Print the commit summary to the log
-          echo "Commit Summary:"
-          echo "$commit_summary"
-
-          # Save the commit summary to a file and then read it into an environment variable
-          echo "COMMIT_SUMMARY<<EOF" >> $GITHUB_ENV
-          echo "$commit_summary" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
       - name: Set up Visual Studio
         uses: microsoft/setup-msbuild@v2
 
@@ -98,27 +71,25 @@ jobs:
         with:
           name: release-artifacts
           path: release
-        
-      # - name: Get commit summary
-      #   uses: Knutschbert/commit-summary@v4
-      #   id: get_commit_summary
-      #   with:
-      #     ref: ${{ github.ref }}
-      
+
       - name: Generate and Print Commit Summary
         id: get_commit_summary
-        shell: sh
+        shell: bash
         run: |
           new_tag=${{ github.ref }}
+
+          # Remove 'refs/tags/' prefix
+          new_tag="${new_tag#refs/tags/}"
+
           previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
-          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" $previous_tag..$new_tag)
-          
-          # Print the commit summary to the log
+          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
+
+          echo "Current tag: $new_tag"
+          echo "Previous tag: $previous_tag"
           echo "Commit Summary:"
           echo "$commit_summary"
 
-          # Save the commit summary to a file and then read it into an environment variable
-          echo "COMMIT_SUMMARY<<EOF" >> $GITHUB_ENV
+          echo "summary<<EOF" >> $GITHUB_ENV
           echo "$commit_summary" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
