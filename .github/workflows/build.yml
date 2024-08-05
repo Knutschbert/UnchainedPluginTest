@@ -69,6 +69,12 @@ jobs:
         with:
           name: release-artifacts
           path: release
+        
+      - name: Get commit summary
+        uses: actions/commit-summary@v1
+        id: get_commit_summary
+        with:
+          ref: ${{ github.ref }}
 
       - name: Create GitHub Release
         id: create_release
@@ -81,7 +87,8 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            Release notes for ${{ github.ref }}
+            Commits for ${{ github.ref }}:
+            ${{ steps.get_commit_summary.outputs.summary }}
 
       - name: Upload Release Assets - Release
         uses: actions/upload-release-asset@v1
