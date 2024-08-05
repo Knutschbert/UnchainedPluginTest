@@ -1,0 +1,104 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags, e.g., v1.0.0
+  workflow_dispatch:  # Allow manual trigger of the workflow
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Visual Studio
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Print GitHub Ref
+        run: echo "GitHub ref $GITHUB_REF"
+
+      - name: Extract Version Components
+        id: extract_version
+        shell: bash
+        run: |
+          VERSION_REGEX="^refs/tags/v([0-9]+)\.([0-9]+)\.([0-9]+)$"
+          if [[ "$GITHUB_REF" =~ $VERSION_REGEX ]]; then
+            echo "MAJOR=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+            echo "MINOR=${BASH_REMATCH[2]}" >> $GITHUB_ENV
+            echo "PATCH=${BASH_REMATCH[3]}" >> $GITHUB_ENV
+          else
+            echo "The tag format is invalid $GITHUB_REF" >&2
+            exit 1
+          fi
+
+      - name: Configure CMake
+        run: cmake -B build -S . -G "Visual Studio 17 2022" -DVER_MAJOR=${{ env.MAJOR }} -DVER_MINOR=${{ env.MINOR }} -DVER_PATCH=${{ env.PATCH }}
+
+      - name: Build with CMake - Debug
+        run: cmake --build build --config Debug
+
+      - name: Build with CMake - Release
+        run: cmake --build build --config Release
+
+      - name: Create Release Directory
+        run: mkdir release
+
+      - name: Copy Build Artifacts
+        run: |
+          echo f | xcopy Output\Release\UnchainedPlugin.dll release\UnchainedPlugin.dll /E /Y
+          echo f | xcopy Output\Debug\UnchainedPlugin.dll release\UnchainedPlugin_dbg.dll /E /Y
+
+      - name: Upload Release Assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-artifacts
+          path: release
+
+  create_release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release-artifacts
+          path: release
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          body: |
+            Release notes for ${{ github.ref }}
+
+      - name: Upload Release Assets - Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/UnchainedPlugin.dll
+          asset_name: UnchainedPlugin.dll
+          asset_content_type: application/octet-stream
+
+      - name: Upload Release Assets - Debug
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/UnchainedPlugin_dbg.dll
+          asset_name: UnchainedPlugin_dbg.dll
+          asset_content_type: application/octet-stream
