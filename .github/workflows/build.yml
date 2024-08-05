@@ -17,9 +17,6 @@ jobs:
       - name: Set up Visual Studio
         uses: microsoft/setup-msbuild@v2
 
-      - name: Print GitHub Ref
-        run: echo "GitHub ref $GITHUB_REF"
-
       - name: Extract Version Components
         id: extract_version
         shell: bash
@@ -63,12 +60,42 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v3
         with:
           name: release-artifacts
           path: release
+
+      - name: Generate and Print Commit Summary
+        id: get_commit_summary
+        shell: bash
+        run: |
+          new_tag=${{ github.ref }}
+
+          # Remove 'refs/tags/' prefix
+          new_tag="${new_tag#refs/tags/}"
+          # tag_annotation=$(git tag -l --format='%(contents)' "$new_tag" | sed -n 1p)
+
+          previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
+          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
+
+          echo "Current tag: $new_tag"
+          echo "Previous tag: $previous_tag"
+          # echo "tag_annotation: $tag_annotation"
+          echo "Commit Summary:"
+          echo "$commit_summary"
+
+          # echo "tag_annotation=$tag_annotation" >> $GITHUB_ENV
+          # echo "tag_annotation<<EOF" >> $GITHUB_ENV
+          # echo "$tag_annotation" >> $GITHUB_ENV
+          # echo "EOF" >> $GITHUB_ENV
+
+          echo "summary<<EOF" >> $GITHUB_ENV
+          echo "$commit_summary" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         id: create_release
@@ -77,11 +104,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: "Release ${{ github.ref }}"
           draft: false
           prerelease: false
           body: |
-            Release notes for ${{ github.ref }}
+            Commits for ${{ github.ref }}:
+            ${{ env.summary }}
 
       - name: Upload Release Assets - Release
         uses: actions/upload-release-asset@v1
