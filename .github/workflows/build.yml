@@ -71,7 +71,7 @@ jobs:
           path: release
         
       - name: Get commit summary
-        uses: Knutschbert/commit-summary@v3
+        uses: Knutschbert/commit-summary@v4
         id: get_commit_summary
         with:
           ref: ${{ github.ref }}
