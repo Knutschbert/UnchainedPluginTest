@@ -16,18 +16,30 @@ jobs:
 
       - name: Generate and Print Commit Summary
         id: generate_summary
-        shell: sh
+        shell: bash
         run: |
           new_tag=${{ github.ref }}
+          # Remove the 'refs/tags/' prefix from the tag
+          new_tag="${new_tag#refs/tags/}"
+
+          # Find the previous tag
           previous_tag=$(git tag --sort=-creatordate | sed -n 2p)
-          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" $previous_tag..$new_tag)
-          
+
+          # Print the current and previous tags for debugging
+          echo "Current tag: $new_tag"
+          echo "Previous tag: $previous_tag"
+
+          # Generate the commit summary between the two tags
+          commit_summary=$(git log --oneline --pretty=tformat:"%h %s" "$previous_tag..$new_tag")
+
           # Print the commit summary to the log
           echo "Commit Summary:"
           echo "$commit_summary"
 
           # Save the commit summary to a file and then read it into an environment variable
-          echo ::set-output name=summary::$commit_summary
+          echo "COMMIT_SUMMARY<<EOF" >> $GITHUB_ENV
+          echo "$commit_summary" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Set up Visual Studio
         uses: microsoft/setup-msbuild@v2
