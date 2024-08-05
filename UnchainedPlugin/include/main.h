@@ -18,12 +18,12 @@ long long FindSignature(HMODULE baseAddr, DWORD size, const char* title, const c
 	if (found != nullptr)
 	{
 		diff = (long long)found - (long long)baseAddr;
-#ifdef _DEBUG
+#ifndef NDEBUG
 		//std::cout << title << ": 0x" << std::hex << diff << std::endl;
 		printf("?? -> %s : 0x%llx\n", title, diff);
 #endif
 	}
-#ifdef _DEBUG
+#ifndef NDEBUG
 	else
 		printf("!! -> %s : nullptr\n", title);
 		//std::cout << title << ": nullptr" << std::endl;

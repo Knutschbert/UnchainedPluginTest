@@ -23,7 +23,7 @@ DECL_HOOK(FString*, FViewport, (FViewport_C* this_ptr, void* viewportClient))
 				serializeBuilds();
 		}
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 		//std::wcout << this_ptr->AppVersionString.str << ": " << buildNr << " " << buildId << std::endl;
 #endif
 	}

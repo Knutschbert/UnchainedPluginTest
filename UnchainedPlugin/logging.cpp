@@ -6,7 +6,7 @@ int logFString(FString str) {
 }
 
 void log(const char* str) {
-#ifndef _DEBUG
+#ifdef NDEBUG
 	return;
 #endif
 	std::cout << str << std::endl;
@@ -15,7 +15,7 @@ void log(const char* str) {
 
 
 int logWideString(wchar_t* str) {
-#ifndef _DEBUG
+#ifdef NDEBUG
 	return 0;
 #endif
 	int i = 0;
@@ -31,7 +31,7 @@ int logWideString(wchar_t* str) {
 
 
 int logWideString(const wchar_t* str) {
-#ifndef _DEBUG
+#ifdef NDEBUG
 	return 0;
 #endif
 	int i = 0;

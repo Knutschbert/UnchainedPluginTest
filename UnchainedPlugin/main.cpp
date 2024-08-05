@@ -249,7 +249,7 @@ unsigned long main_thread(void* lpParameter) {
 }
 
 int __stdcall DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
-	#ifdef _DEBUG
+	#ifndef NDEBUG
 	if (!GetConsoleWindow()) {
 		AllocConsole();
 		FILE* file_pointer{};
