@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       
       
       - name: Generate and Print Commit Summary
@@ -34,6 +36,7 @@ jobs:
 
           # Print the current and previous tags for debugging
           echo "Current tag: $new_tag"
+          echo "Previous tag: $previous_tag"
           echo "Previous tag: ${{ env.Previous_Tag }}"
 
           # Generate the commit summary between the two tags
