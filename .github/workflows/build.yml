@@ -71,7 +71,7 @@ jobs:
           path: release
         
       - name: Get commit summary
-        uses: actions/commit-summary@v1
+        uses: kristiyan-petrov/commit-summary@v1
         id: get_commit_summary
         with:
           ref: ${{ github.ref }}
